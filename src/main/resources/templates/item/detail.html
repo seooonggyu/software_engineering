@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Detail</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+</head>
+<body>
+<h2>Item Detail</h2>
+
+<div>
+    ID : <input type="text" id="detail_item_id" readonly/> <br/>
+    title : <input type="text" id="detail_item_title" /> <br/>
+    content : <input type="text" id="detail_item_content" /> <br/>
+
+    upperRegion(도/광역시) : <input type="text" id="detail_item_upperRegion" /> <br/>
+    lowerRegion(시/군/구) : <input type="text" id="detail_item_lowerRegion" /> <br/>
+    district(동/읍/면) : <input type="text" id="detail_item_district" /> <br/>
+    detailLocation(상세주소) : <input type="text" id="detail_item_detail" /> <br/>
+
+    startTime : <input type="datetime-local" id="input_item_startTime"/> <br/>
+    endTime : <input type="datetime-local" id="input_item_endTime"/> <br/>
+
+    category :
+    <select id="detail_item_category">
+        <option value="ELECTRONICS">전자기기 (ELECTRONICS)</option>
+        <option value="WALLET">지갑/현금 (WALLET)</option>
+        <option value="CARD">카드 (CARD)</option>
+        <option value="CLOTHING">의류 (CLOTHING)</option>
+        <option value="ACCESSORY">악세서리 (ACCESSORY)</option>
+        <option value="DOCUMENT">서류/증명서 (DOCUMENT)</option>
+        <option value="COSMETICS">화장품 (COSMETICS)</option>
+        <option value="OTHERS">기타 (OTHERS)</option>
+    </select> <br/>
+
+    status :
+    <select id="detail_item_status">
+        <option value="LOST">분실 (LOST)</option>
+        <option value="FOUND">습득 (FOUND)</option>
+        <option value="COMPLETE">완료 (COMPLETE)</option>
+    </select> <br/>
+
+    <br/><br/>
+    <button onclick="update_item()">수정하기</button>
+    <button onclick="delete_item()">삭제하기</button>
+</div>
+
+<script>
+    // URL에서 id값 추출해오기
+    let temp_url = window.location.href;
+    let split_temp_url = temp_url.split('/');
+    let final_id = split_temp_url[split_temp_url.length - 1];
+    let split_q = final_id.split("?");
+    if (split_q.length > 0) {
+        final_id = split_q[0];
+    }
+
+    $(document).ready(function() {
+        console.log("ready!");
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                let accessToken = localStorage.getItem("accessToken");
+                if (accessToken) {
+                    xhr.setRequestHeader("Authorization", accessToken);
+                }
+            },
+            error: function(xhr, status, error) {
+                // 토큰 만료 또는 권한 없음 처리
+                if (xhr.status === 401 || xhr.status === 403) {
+                    alert("세션이 만료되었거나 접근 권한이 없습니다. 다시 로그인해주세요.");
+                    location.replace("/admlogin");
+                }
+            }
+        });
+        detail_item();
+    });
+
+    // 상세 데이터 조회 (GET)
+    function detail_item() {
+        $.ajax({
+            url: "/api/item",
+            type: "GET",
+            contentType: 'application/json; charset=utf-8',
+            data: {
+                id: final_id
+            },
+            cache: false,
+            success: (obj_data, status, xhr) => {
+                // 응답받은 데이터를 각 input 필드 및 select 박스에 매핑
+                $("#detail_item_id").val(obj_data["id"]);
+                $("#detail_item_title").val(obj_data["title"]);
+                $("#detail_item_content").val(obj_data["content"]);
+
+                $("#detail_item_upperRegion").val(obj_data["upperRegion"]);
+                $("#detail_item_lowerRegion").val(obj_data["lowerRegion"]);
+                $("#detail_item_district").val(obj_data["district"]);
+                $("#detail_item_detail").val(obj_data["detail"]);
+
+                $("#detail_item_startTime").val(obj_data["startTime"]);
+                $("#detail_item_endTime").val(obj_data["endTime"]);
+
+                // Select Box 값 자동 선택
+                $("#detail_item_category").val(obj_data["category"]);
+                $("#detail_item_status").val(obj_data["status"]);
+            },
+            error: (obj_data, status, xhr) => {
+                alert("데이터를 불러오지 못했습니다.");
+                console.error(obj_data);
+            }
+        });
+    }
+
+    // 데이터 수정 (PUT)
+    function update_item() {
+        let _param = {
+            id: final_id,
+            title: $("#detail_item_title").val(),
+            content: $("#detail_item_content").val(),
+            upperRegion: $("#detail_item_upperRegion").val(),
+            lowerRegion: $("#detail_item_lowerRegion").val(),
+            district: $("#detail_item_district").val(),
+            detail: $("#detail_item_detail").val(),
+            startTime: $("#detail_item_startTime").val(),
+            endTime: $("#detail_item_endTime").val(),
+            category: $("#detail_item_category").val(),
+            status: $("#detail_item_status").val()
+        };
+
+        $.ajax({
+            url: "/api/item",
+            type: "PUT",
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(_param),
+            cache: false,
+            success: (obj_data, status, xhr) => {
+                alert("수정이 완료되었습니다.");
+                // 수정 후 페이지 새로고침 혹은 목록으로 이동 설정 가능
+                location.reload();
+            },
+            error: (obj_data, status, xhr) => {
+                alert("수정 중 오류가 발생했습니다.");
+                console.error(obj_data);
+            }
+        });
+    }
+
+    // 데이터 삭제 (DELETE)
+    function delete_item() {
+        if(!confirm("정말로 삭제하시겠습니까?")) return;
+
+        $.ajax({
+            url: "/api/item",
+            type: "DELETE",
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify({
+                id: final_id
+            }),
+            cache: false,
+            success: (obj_data, status, xhr) => {
+                alert("삭제가 완료되었습니다.");
+                window.location.href = "/item/list"; // 삭제 후 목록 페이지로 강제 이동
+            },
+            error: (obj_data, status, xhr) => {
+                alert("삭제 중 오류가 발생했습니다.");
+                console.error(obj_data);
+            }
+        });
+    }
+</script>
+</body>
+</html>

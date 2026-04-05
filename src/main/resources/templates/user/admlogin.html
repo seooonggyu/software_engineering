@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title> 관리자 로그인</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #4e73df; /* SB Admin 2 기본 블루 배경 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: #ffffff;
+            padding: 50px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        .logo-section {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .font-logo {
+            font-size: 32px;
+            font-weight: 900;
+            color: #4e73df; /* 딥 블루 로고 색상 */
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .admin-badge {
+            color: #858796;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 8px;
+            letter-spacing: 2px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #d1d3e2;
+            border-radius: 30px; /* 둥근 입력창 (모던 스타일) */
+            box-sizing: border-box;
+            font-size: 14px;
+            color: #6e707e;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: #4e73df;
+            outline: none;
+            box-shadow: 0 0 5px rgba(78, 115, 223, 0.3);
+        }
+        .btn_login {
+            width: 100%;
+            padding: 15px;
+            background-color: #4e73df;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+        .btn_login:hover {
+            background-color: #2e59d9;
+            box-shadow: 0 5px 10px rgba(46, 89, 217, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="logo-section">
+        <div class="font-logo"><i class="fas fa-laugh-wink"></i> ADMIN</div>
+        <div class="admin-badge">ADMINISTRATOR PORTAL</div>
+    </div>
+
+    <div class="form-group">
+        <input type="text" id="input_user_username" name="username" class="input_create" placeholder="관리자 아이디">
+    </div>
+    <div class="form-group">
+        <input type="password" id="input_user_password" name="password" class="input_create" placeholder="비밀번호">
+    </div>
+
+    <button class="btn_login" onclick="loginUser()">로그인</button>
+</div>
+
+<script>
+    function loginUser(){
+        let _data = {};
+        $(".input_create").each(function(){
+            _data[$(this).attr("name")] = $(this).val();
+        });
+
+        $.ajax({
+            url: "/api/login",
+            method: "POST",
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(_data),
+            success: (data, status, xhr) => {
+                let refreshToken = xhr.getResponseHeader("RefreshToken");
+                if(refreshToken === null || refreshToken === "" || Number(refreshToken) <= 0){
+                    alert("로그인 실패: 정보를 확인하세요.");
+                } else {
+                    localStorage.setItem("refreshToken", refreshToken);
+                    alert(" refreshToken" + refreshToken);
+                    getAccessToken();
+                }
+            },
+            error: () => {
+                alert("로그인 중 오류가 발생했습니다. 아이디와 비밀번호를 확인해주세요.");
+            },
+        });
+    }
+
+    function getAccessToken(){
+        $.ajax({
+            url: "/api/auth",
+            method: "POST",
+            beforeSend : function(xhr){
+                let refreshToken = localStorage.getItem("refreshToken");
+                xhr.setRequestHeader("RefreshToken", refreshToken);
+            },
+            contentType: 'application/json; charset=utf-8',
+            success: (data, status, xhr) => {
+                let accessToken = xhr.getResponseHeader("Authorization");
+                localStorage.setItem("accessToken", accessToken);
+                alert(" accessToken" + accessToken);
+                location.replace('/index'); // 대시보드(admin) 경로로 이동
+            },
+            error: () => {
+                alert("인증 토큰을 가져오는 중 오류가 발생했습니다.");
+            },
+        });
+    }
+</script>
+</body>
+</html>

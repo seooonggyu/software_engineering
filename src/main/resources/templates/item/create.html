@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <title>Document</title>
+</head>
+<body>
+create
+<div>
+    title : <input type="text" id="input_item_title" name="title" class="input_create"/> <br/>
+    content : <input type="text" id="input_item_content" name="content" class="input_create"/> <br/>
+
+    location :
+    <select id="select_item_location" name="location" class="input_create">
+        <option value="HCA">효암채플 (HCA)</option>
+        <option value="LIBRARY">효암채플 별관 (LIBRARY)</option>
+        <option value="GLC">GLC (GLC)</option>
+        <option value="HDH">현동홀 (HDH)</option>
+        <option value="NHM">느헤미야홀 (NHM)</option>
+        <option value="NTH">뉴턴홀 (NTH)</option>
+        <option value="ANH">올네이션스홀 (ANH)</option>
+        <option value="OH">오석관 (OH)</option>
+        <option value="CSH">코너스톤홀 (CSH)</option>
+        <option value="KGH">김영길그레이스스쿨 (KGH)</option>
+        <option value="D301">갈대상자관 (D301)</option>
+        <option value="D503">비전관 (D503)</option>
+        <option value="D504">창조관 (D504)</option>
+        <option value="D506">로뎀관 (D506)</option>
+        <option value="D508">국제관 (D508)</option>
+        <option value="D509">은혜관 (D509)</option>
+        <option value="D512">하용조관 (D512)</option>
+        <option value="SU">학생회관 (SU)</option>
+        <option value="B501">산학협력관 (B501)</option>
+        <option value="EBEN">에벤에셀관 (EBEN)</option>
+        <option value="B507">SW TOWN (B507)</option>
+        <option value="HGU1">야외공연장 (HGU1)</option>
+        <option value="HGU2">히딩크필드 (HGU2)</option>
+        <option value="HGU3">히딩크 옆 농구장 (HGU3)</option>
+        <option value="HGU4">학관 쪽 농구장 (HGU4)</option>
+        <option value="HGU5">채플 쪽 농구장 (HGU5)</option>
+        <option value="HGU6">버스정류장 (HGU6)</option>
+        <option value="HGU7">택시정류장 (HGU7)</option>
+        <option value="HGU8">로맨틱잔디 (HGU8)</option>
+        <option value="HGU9">평봉필드 (HGU9)</option>
+    </select> <br/>
+
+    startTime : <input type="datetime-local" id="input_item_startTime" name="itemDateTime" class="input_create"/> <br/>
+    endTime : <input type="datetime-local" id="input_item_endTime" name="itemDateTime" class="input_create"/> <br/>
+
+    category :
+    <select id="select_item_category" name="category" class="input_create">
+        <option value="ELECTRONICS">전자기기 (ELECTRONICS)</option>
+        <option value="WALLET">지갑/현금 (WALLET)</option>
+        <option value="CARD">카드 (CARD)</option>
+        <option value="CLOTHING">의류 (CLOTHING)</option>
+        <option value="ACCESSORY">악세서리 (ACCESSORY)</option>
+        <option value="DOCUMENT">서류/증명서 (DOCUMENT)</option>
+        <option value="COSMETICS">화장품 (COSMETICS)</option>
+        <option value="OTHERS">기타 (OTHERS)</option>
+    </select> <br/>
+
+    status :
+    <select id="select_item_status" name="status" class="input_create">
+        <option value="LOST">분실 (LOST)</option>
+        <option value="FOUND">습득 (FOUND)</option>
+        <option value="COMPLETE">완료 (COMPLETE)</option>
+    </select> <br/>
+    사진 첨부 : <input type="file" id="input_item_images" accept="image/*" multiple class="input_create"/> <br/>
+    <br/><br/>
+    <button onclick="create_item()">등록하기</button>
+</div>
+
+<script>
+    function create_item() {
+        let accessToken = localStorage.getItem("accessToken");
+
+        let _param = {
+            title: $("#input_item_title").val(),
+            content: $("#input_item_content").val(),
+            location: $("#select_item_location").val(),
+            startTime: $("#input_item_startTime").val(),
+            endTime: $("#input_item_endTime").val(),
+            category: $("#select_item_category").val(),
+            status: $("#select_item_status").val(),
+        };
+
+        // FormData 객체 생성
+        let formData = new FormData();
+
+        // JSON 데이터를 Blob으로 변환하여 FormData에 담기 (매우 중요)
+        formData.append("params", new Blob([JSON.stringify(_param)], {
+            type: "application/json; charset=utf-8"
+        }));
+
+        let files = $("#input_item_images")[0].files;
+        for (let i = 0; i < files.length; i++) {
+            formData.append("files", files[i]); // "files"라는 동일한 이름표(Key)로 계속 추가
+        }
+
+        $.ajax({
+            url: "/api/item", // 실제 백엔드 컨트롤러 매핑 주소로 변경해주세요
+            type: "POST",
+            data: formData, //JSON.stringify(_param), // 참고: func_ajax 내부에서 어떻게 받는지에 따라 param 또는 data로 지정 (jQuery 기본은 data)
+            processData: false,         // jQuery가 데이터를 쿼리스트링으로 변환하지 않도록 설정
+            contentType: false, // FormData 사용 시 필수 (자동으로 multipart/form-data 설정됨)
+            beforeSend: function (xhr) {
+                if (accessToken) {
+                    xhr.setRequestHeader("Authorization", accessToken);
+                } else {
+                    alert("토큰이 없습니다! 다시 로그인해주세요.");
+                }
+            },
+            success: function(data){
+                alert("분실물 등록 성공");
+                location.reload();
+            },
+            error: function(xhr, status, error){
+                alert("정상적으로 이루어지지 않았습니다. 다시 시도해주세요.");
+                console.error("Error details:", xhr.responseText);
+            }
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원가입</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        /* 깔끔하고 모던한 웹 폼 디자인 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .signup-container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0,123,255,0.3);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="signup-container">
+    <h2>회원가입</h2>
+    <form id="signupForm">
+        <div class="form-group">
+            <label for="username">아이디 (Username)</label>
+            <input type="text" id="username" name="username" placeholder="아이디를 입력하세요" required>
+        </div>
+        <div class="form-group">
+            <label for="password">비밀번호 (Password)</label>
+            <input type="password" id="password" name="password" placeholder="비밀번호를 입력하세요" required>
+        </div>
+        <div class="form-group">
+            <label for="name">이름 (Name)</label>
+            <input type="text" id="name" name="name" placeholder="이름을 입력하세요" required>
+        </div>
+        <button type="submit">가입하기</button>
+    </form>
+
+    <div id="resultMessage" class="message"></div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // 1. 폼 전송 이벤트 가로채기
+        $('#signupForm').on('submit', function(e) {
+            e.preventDefault(); // 화면 새로고침 방지
+
+            // 2. 전송할 데이터 객체 만들기
+            const signupData = {
+                username: $('#username').val(),
+                password: $('#password').val(),
+                name: $('#name').val()
+            };
+
+            // 3. jQuery AJAX 요청
+            $.ajax({
+                type: 'POST',
+                url: '/api/user/signup',
+                contentType: 'application/json', // JSON으로 보낸다고 백엔드에 알려줌
+                data: JSON.stringify(signupData), // 자바스크립트 객체를 JSON 문자열로 변환
+
+                success: function(response) {
+                    // HTTP 상태 코드 200번대(성공)일 때 실행
+                    $('#resultMessage')
+                        .css('color', '#28a745')
+                        .text('회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.');
+
+                    // 1.5초 뒤에 로그인 페이지로 리다이렉트
+                    setTimeout(function() {
+                        window.location.href = '/user/login';
+                    }, 1500);
+                },
+                error: function(xhr, status, error) {
+                    // HTTP 상태 코드 400, 500번대(실패)일 때 실행
+                    $('#resultMessage')
+                        .css('color', '#dc3545')
+                        .text('회원가입 실패: 중복된 아이디이거나 서버 오류입니다.');
+                    console.error('Error:', error);
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

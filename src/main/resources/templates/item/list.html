@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item List</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+</head>
+<body>
+<h2>Item List</h2>
+
+<div>
+    검색어(제목) : <input type="text" id="search_item_title" />
+    <button onclick="list_item()">검색</button>
+</div>
+<br/>
+
+<div id="div_list">
+</div>
+<br/>
+
+<button onclick="list_item()">전체 목록 불러오기</button>
+
+<script>
+    $(document).ready(function() {
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                let accessToken = localStorage.getItem("accessToken");
+                if (accessToken) {
+                    xhr.setRequestHeader("Authorization", accessToken);
+                }
+            },
+            error: function(xhr, status, error) {
+                // 토큰 만료 또는 권한 없음 처리
+                if (xhr.status === 401 || xhr.status === 403) {
+                    alert("세션이 만료되었거나 접근 권한이 없습니다. 다시 로그인해주세요.");
+                    location.replace("/admlogin");
+                }
+            }
+        });
+        list_item();
+    });
+
+    function list_item() {
+        $.ajax({
+            url: "/api/item/list",
+            type: "GET",
+            contentType: 'application/json; charset=utf-8',
+            data: {
+                title: $("#search_item_title").val()
+            },
+            cache: false,
+            success: (obj_data, status, xhr) => {
+                $("#div_list").html("");
+
+                for (let each of obj_data) {
+                    // 제목 클릭 시 상세 페이지로 이동하도록 링크 생성 (category와 status도 함께 표시)
+                    $("#div_list").append(
+                        `<a href='/item/detail/${each["id"]}'>[${each["id"]}] ${each["title"]}</a>
+                             // 분류: ${each["category"]} // 상태: ${each["status"]}<br/>`
+                    );
+                }
+            },
+            error: (obj_data, status, xhr) => {
+                alert("목록을 불러오는 중 오류가 발생했습니다.");
+                console.error(obj_data);
+            }
+        });
+    }
+</script>
+</body>
+</html>

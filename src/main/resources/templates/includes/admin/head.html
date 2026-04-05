@@ -1,0 +1,154 @@
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title> ADMIN - 관리자 페이지</title>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/startbootstrap-sb-admin-2/4.1.4/css/sb-admin-2.min.css" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js"></script>
+
+    <style>
+        /* 공통 유틸리티 디자인 */
+        .hide { display: none !important; }
+        .cursor_pointer { cursor: pointer; }
+    </style>
+
+    <script>
+        // ==========================================
+        // ✨ [전역 설정] 모든 AJAX 요청에 JWT 토큰 자동 추가
+        // ==========================================
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                let accessToken = localStorage.getItem("accessToken");
+                if (accessToken) {
+                    xhr.setRequestHeader("Authorization", accessToken);
+                }
+            },
+            error: function(xhr, status, error) {
+                // 토큰 만료 또는 권한 없음 처리
+                if (xhr.status === 401 || xhr.status === 403) {
+                    alert("세션이 만료되었거나 접근 권한이 없습니다. 다시 로그인해주세요.");
+                    location.replace("/admlogin");
+                }
+            }
+        });
+
+        // ==========================================
+        // ✨ 외부 Vercel 서버에 있던 필수 커스텀 함수 직접 구현
+        // ==========================================
+        function isNull(val) {
+            return val === undefined || val === null || val === "";
+        }
+
+        // URL에서 ID 추출 (예: /admin_detail/15 -> 15 반환)
+        function getIdFromUrl(defaultVal) {
+            let parts = window.location.pathname.split('/');
+            let id = parts[parts.length - 1];
+            return isNaN(id) ? defaultVal : id;
+        }
+
+        function listener_href_param(obj_href, obj_param) {
+            if(isNull(obj_param)) obj_param = getIdFromUrl(null);
+            location.href = obj_href + obj_param;
+        }
+
+        // 핵심 AJAX 래퍼 함수 (GET과 POST/PUT의 데이터 포맷을 알아서 맞춰줌)
+        function func_ajax(obj_data) {
+            let ajaxSettings = {
+                url: obj_data.url,
+                type: obj_data.type,
+                contentType: 'application/json; charset=utf-8',
+                success: function (data, status, xhr) {
+                    if (obj_data.success) obj_data.success(data, status, xhr);
+                },
+                error: function (xhr, status, error) {
+                    if (obj_data.error && xhr.status !== 401 && xhr.status !== 403) {
+                        obj_data.error(xhr, status, error);
+                    }
+                }
+            };
+
+            // GET 방식은 객체 그대로, POST/PUT/DELETE 방식은 JSON 문자열로 변환해서 전송
+            if (obj_data.type.toUpperCase() === 'GET') {
+                ajaxSettings.data = obj_data.param;
+            } else {
+                ajaxSettings.data = JSON.stringify(obj_data.param);
+            }
+            $.ajax(ajaxSettings);
+        }
+
+        // 입력 폼 파라미터 자동 수집
+        function listenerCreateParam() {
+            let param = {};
+            $(".input_param").each(function() {
+                param[$(this).attr("name")] = $(this).val();
+            });
+            return param;
+        }
+
+        // 상세조회 후 데이터 자동 매핑
+        function listenerAfterDetail(obj_data, type) {
+            $(".input_param").each(function() {
+                let name = $(this).attr("name");
+                if(obj_data[name] !== undefined) {
+                    $(this).val(obj_data[name]);
+                }
+            });
+        }
+
+        // 삭제 체크박스 ID 수집
+        function listenerGetDeleteIds(type) {
+            let ids = [];
+            $(".input_chk_delete_" + type + "_each:checked").each(function() {
+                ids.push($(this).attr("keyword"));
+            });
+            return ids;
+        }
+
+        // 전체 선택/해제 로직
+        function listener_chk_delete(obj, type) {
+            let isChecked = $(obj).prop("checked");
+            if($(obj).hasClass("input_chk_delete_" + type + "_all")) {
+                $(".input_chk_delete_" + type + "_each").prop("checked", isChecked);
+            } else {
+                let total = $(".input_chk_delete_" + type + "_each").length;
+                let checked = $(".input_chk_delete_" + type + "_each:checked").length;
+                $(".input_chk_delete_" + type + "_all").prop("checked", total === checked);
+            }
+        }
+
+        // 검색창 날짜 셋팅 로직 (오늘/1주/1개월)
+        function set_search_sdatefdate(type, keyword, callback) {
+            let today = new Date();
+            let sdate = "";
+            let fdate = today.toISOString().split('T')[0]; // YYYY-MM-DD 포맷
+
+            if (type === 'today') {
+                sdate = fdate;
+            } else if (type === 'week') {
+                let weekAgo = new Date(today.setDate(today.getDate() - 7));
+                sdate = weekAgo.toISOString().split('T')[0];
+            } else if (type === 'month') {
+                let monthAgo = new Date(today.setMonth(today.getMonth() - 1));
+                sdate = monthAgo.toISOString().split('T')[0];
+            } else {
+                sdate = ""; fdate = "";
+            }
+            $("#search_" + keyword + "_sdate").val(sdate);
+            $("#search_" + keyword + "_fdate").val(fdate);
+            if (callback) callback();
+        }
+
+        // 로그아웃 로직
+        function logout() {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            alert("로그아웃 되었습니다.");
+            location.replace("/admlogin");
+        }
+    </script>
+</head>
