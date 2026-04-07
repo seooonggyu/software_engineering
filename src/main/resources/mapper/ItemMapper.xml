@@ -14,8 +14,8 @@
 		     , item.location
 			 , item.category
 			 , item.status
-			 , item.start_tiem as startTime
-			 , item.end_tiem as endTime
+			 , item.start_time as startTime
+			 , item.end_time as endTime
 		FROM item
 		WHERE item.id = #{id}
 	</select>

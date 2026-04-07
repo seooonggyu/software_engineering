@@ -16,10 +16,9 @@ public class CorsFilterConfiguration {
       CorsConfiguration config = new CorsConfiguration();
       config.setAllowCredentials(true);
       config.setAllowedOriginPatterns(Arrays.asList("*"));
-      config.addAllowedHeader("*");
+      config.setAllowedHeaders(Arrays.asList("Authorization", "RefreshToken", "Content-Type", "Accept", "Origin", "X-Requested-With"));
       config.addAllowedMethod("*");
-      String[] arrays = {"Authorization", "RefreshToken"};
-      config.setAllowedHeaders(Arrays.asList(arrays));
+      config.setExposedHeaders(Arrays.asList("Authorization", "RefreshToken"));
       source.registerCorsConfiguration("/api/**", config);
       return new CorsFilter(source);
    }
