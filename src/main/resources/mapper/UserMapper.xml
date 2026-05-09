@@ -21,7 +21,7 @@
 		<if test="sdate != null and sdate != ''">AND user.created_at >= CONCAT(#{sdate}, ' 00:00:00')</if>
 		<if test="fdate != null and fdate != ''">AND CONCAT(#{fdate}, ' 23:59:59') >= user.created_at</if>
 		<if test = "name != null and name !=''">AND user.name LIKE CONCAT('%', #{name}, '%')</if>
-		<if test = "rfrom != null">AND user.rfrom = #{rfrom}</if>
+<!--		<if test = "rfrom != null">AND user.rfrom = #{rfrom}</if>-->
 	</sql>
 
 	<select id="list" parameterType="hashMap" resultType="com.project.software_engineering.dto.UserDto$DetailResDto">

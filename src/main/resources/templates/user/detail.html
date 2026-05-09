@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Detail</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+</head>
+<body>
+<h2>User Detail</h2>
+
+<div>
+    ID : <input type="text" id="detail_user_id" readonly/> <br/>
+    deleted : <input type="text" id="detail_user_deleted" readonly/> <br/>
+    createdAt : <input type="text" id="detail_user_createdAt" readonly/> <br/>
+    modifiedAt : <input type="text" id="detail_user_modifiedAt" readonly/> <br/>
+
+    username : <input type="text" id="detail_user_username" /> <br/>
+    name : <input type="text" id="detail_user_name" /> <br/>
+
+
+    <br/><br/>
+    <button onclick="update_user()">수정하기</button>
+    <button onclick="delete_user()">삭제하기</button>
+    <button onclick="start_chat()" style="background-color: #4CAF50; color: white;">채팅하기</button>
+</div>
+
+<script>
+    // URL에서 id값 추출해오기
+    let temp_url = window.location.href;
+    let split_temp_url = temp_url.split('/');
+    let final_id = split_temp_url[split_temp_url.length - 1];
+    let split_q = final_id.split("?");
+    if (split_q.length > 0) {
+        final_id = split_q[0];
+    }
+
+    $(document).ready(function() {
+        console.log("ready!");
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                let accessToken = localStorage.getItem("accessToken");
+                if (accessToken) {
+                    xhr.setRequestHeader("Authorization", accessToken);
+                }
+            },
+            error: function(xhr, status, error) {
+                // 토큰 만료 또는 권한 없음 처리
+                if (xhr.status === 401 || xhr.status === 403) {
+                    alert("세션이 만료되었거나 접근 권한이 없습니다. 다시 로그인해주세요.");
+                    location.replace("/admlogin");
+                }
+            }
+        });
+        detail_user();
+    });
+
+    // 상세 데이터 조회 (GET)
+    // [프론트엔드 개발자 참고용 주석]
+    // - Endpoint: GET /api/user
+    // - Request Header: Authorization: Bearer {accessToken}
+    // - Request Parameter: Query String (id={final_id})
+    // - Response JSON:
+    //   { "id": 1, "username": "user1", "name": "User Name", "deleted": false, "createdAt": "...", "modifiedAt": "..." }
+    // - 로직 설명: 페이지 로드 시 URL에서 추출한 id 값으로 유저 정보를 가져와 화면의 입력창에 값을 채웁니다.
+    function detail_user() {
+        $.ajax({
+            url: "/api/user",
+            type: "GET",
+            contentType: 'application/json; charset=utf-8',
+            data: {
+                id: final_id
+            },
+            cache: false,
+            success: (obj_data, status, xhr) => {
+                $("#detail_user_id").val(obj_data["id"]);
+                $("#detail_user_deleted").val(obj_data["deleted"]);
+                $("#detail_user_createdAt").val(obj_data["createdAt"]);
+                $("#detail_user_modifiedAt").val(obj_data["modifiedAt"]);
+
+                $("#detail_user_username").val(obj_data["username"]);
+                $("#detail_user_name").val(obj_data["name"]);
+            },
+            error: (obj_data, status, xhr) => {
+                alert("데이터를 불러오지 못했습니다.");
+                console.error(obj_data);
+            }
+        });
+    }
+
+    // 데이터 수정 (PUT)
+    // [프론트엔드 개발자 참고용 주석]
+    // - Endpoint: PUT /api/user
+    // - Request Header: Authorization: Bearer {accessToken}
+    // - Request JSON (payload):
+    //   {
+    //     "id": "유저 ID (기존과 동일해야 함)",
+    //     "username": "수정할 유저 로그인 아이디",
+    //     "name": "수정할 유저 이름"
+    //   }
+    // - Response: HTTP 200 OK (성공 시)
+    // - 로직 설명: 
+    //   화면의 input 요소들에서 사용자가 변경한 값을 _param 객체로 모아 JSON 문자열로 변환합니다.
+    //   PUT 요청을 통해 서버에 수정을 반영하고, 완료되면 새로고침하여 변경된 데이터를 갱신합니다.
+    function update_user() {
+        let _param = {
+            id: final_id,
+            username: $("#detail_user_username").val(),
+            name: $("#detail_user_name").val(),
+        };
+
+        $.ajax({
+            url: "/api/user",
+            type: "PUT",
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(_param),
+            cache: false,
+            success: (obj_data, status, xhr) => {
+                alert("수정이 완료되었습니다.");
+                // 수정 후 페이지 새로고침 혹은 목록으로 이동 설정 가능
+                location.reload();
+            },
+            error: (obj_data, status, xhr) => {
+                alert("수정 중 오류가 발생했습니다.");
+                console.error(obj_data);
+            }
+        });
+    }
+
+    // 데이터 삭제 (DELETE)
+    function delete_user() {
+        if(!confirm("정말로 삭제하시겠습니까?")) return;
+
+        $.ajax({
+            url: "/api/user",
+            type: "DELETE",
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify({
+                id: final_id
+            }),
+            cache: false,
+            success: (obj_data, status, xhr) => {
+                alert("삭제가 완료되었습니다.");
+                window.location.href = "/item/list"; // 삭제 후 목록 페이지로 강제 이동
+            },
+            error: (obj_data, status, xhr) => {
+                alert("삭제 중 오류가 발생했습니다.");
+                console.error(obj_data);
+            }
+        });
+    }
+
+    // 채팅하기
+    function start_chat() {
+        $.ajax({
+            url: "/api/chat/room?otherUserId=" + final_id,
+            type: "POST",
+            success: function(data) {
+                // 생성되거나 조회된 채팅방의 ID를 가지고 채팅 화면으로 이동
+                window.location.href = "/chat/room/" + data.id;
+            },
+            error: function(err) {
+                alert("채팅방을 생성하지 못했습니다.");
+                console.error(err);
+            }
+        });
+    }
+</script>
+</body>
+</html>

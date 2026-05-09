@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Test</title>
+    <!-- SockJS & STOMP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <!-- jQuery for simple DOM manipulation -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .chat-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: 400px;
+            height: 300px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+        }
+
+        .message-sender {
+            font-weight: bold;
+            font-size: 0.8em;
+            color: #555;
+            margin-bottom: 2px;
+        }
+
+        .message-text {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+        }
+
+        .my-message .message-text {
+            background-color: #d1ffd1;
+        }
+
+        .my-message {
+            text-align: right;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            width: 400px;
+        }
+
+        .input-area input {
+            flex-grow: 1;
+            padding: 5px;
+        }
+
+        .input-area button {
+            padding: 5px 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Chat Room Test</h2>
+    <div>
+        <label style="display:block; margin-bottom: 5px;">JWT Token: <input type="text" id="jwtToken"
+                placeholder="Bearer eyJ..." style="width: 300px;"></label>
+        <label>User ID (Me, for UI rendering): <input type="number" id="userId" value="1" style="width: 50px;"></label>
+        <label>User ID (Other): <input type="number" id="otherUserId" value="2" style="width: 50px;"></label>
+        <button onclick="createAndJoinRoom()">Join Room</button>
+        <button onclick="leaveRoom()" id="leaveBtn" disabled style="color: red;">Leave Room</button>
+    </div>
+    <hr>
+
+    <div>
+        <h4>Room ID: <span id="roomIdDisplay">None</span></h4>
+        <div class="chat-container" id="chatBox"></div>
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+            <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let currentRoomId = null;
+        let currentUserId = null;
+
+        function setupAjaxHeaders() {
+            const token = $('#jwtToken').val();
+            $.ajaxSetup({
+                headers: {
+                    'Authorization': token
+                }
+            });
+        }
+
+        function createAndJoinRoom() {
+            const userId = $('#userId').val();
+            const otherUserId = $('#otherUserId').val();
+
+            if (!otherUserId) {
+                alert("Please enter Other user ID.");
+                return;
+            }
+
+            currentUserId = userId;
+            setupAjaxHeaders();
+
+            // [방 생성 또는 가져오기 및 초기화 로직]
+            // - 목적: 특정 유저와의 1:1 채팅방을 생성하거나 이미 존재하면 가져옵니다.
+            // 1. 방 생성/조회 (REST API)
+            //   - Endpoint: POST /api/chat/room?otherUserId={otherUserId}
+            //   - Request Header: Authorization: {token} (setupAjaxHeaders에서 설정)
+            //   - Request Parameter: Query String (otherUserId)
+            //   - Response JSON: { "id": 1, "roomName": "...", "createdAt": "...", "updatedAt": "..." }
+            //   - 로직 설명: 응답받은 방 ID(currentRoomId)를 저장하고, 채팅 입력창 및 관련 버튼들을 활성화합니다.
+            $.post(`/api/chat/room?otherUserId=${otherUserId}`, function (data) {
+                currentRoomId = data.id;
+                $('#roomIdDisplay').text(currentRoomId);
+                $('#messageInput').prop('disabled', false);
+                $('#sendBtn').prop('disabled', false);
+                $('#leaveBtn').prop('disabled', false);
+                $('#chatBox').empty();
+
+                // 2. 과거 메시지 불러오기 (REST API)
+                //   - Endpoint: GET /api/chat/room/{roomId}/messages
+                //   - Request Parameter: Path Variable (currentRoomId)
+                //   - Response JSON Array: [ { "id": 1, "type": "CHAT", "senderId": 2, "message": "안녕하세요" ... }, ... ]
+                //   - 로직 설명: 방에 입장하기 전 과거에 나눈 대화 기록을 화면에 모두 렌더링합니다.
+                $.get(`/api/chat/room/${currentRoomId}/messages`, function (messages) {
+                    messages.forEach(msg => {
+                        displayMessage(msg);
+                    });
+
+                    // 3. WebSocket 연결 및 구독
+                    //   - 과거 내역 로딩이 완료된 후, 실시간 통신을 위해 connectWebSocket()을 호출합니다.
+                    connectWebSocket();
+                });
+
+            }).fail(function (err) {
+                let errorMsg = "Failed to join room.";
+                if (err.responseJSON && err.responseJSON.message) {
+                    errorMsg += " " + err.responseJSON.message;
+                }
+                alert(errorMsg);
+                console.error(err);
+            });
+        }
+
+        function leaveRoom() {
+            // [채팅방 나가기 함수]
+            // - 목적: 현재 채팅방에서 나갑니다 (소프트 딜리트 방식).
+            // - Endpoint: DELETE /api/chat/room/{roomId}
+            // - Request Parameter: Path Variable (currentRoomId)
+            // - 로직 설명: 
+            //   백엔드에 나가기 처리를 요청하고 성공 시 
+            //   화면을 초기 상태(입력창/버튼 비활성화, 방 ID None 처리, 소켓 끊기 등)로 되돌립니다.
+            if (!currentRoomId) return;
+
+            setupAjaxHeaders();
+            $.ajax({
+                url: `/api/chat/room/${currentRoomId}`,
+                type: 'DELETE',
+                success: function () {
+                    alert("Left the chat room successfully.");
+                    if (stompClient !== null) {
+                        stompClient.disconnect();
+                    }
+                    currentRoomId = null;
+                    $('#roomIdDisplay').text('None');
+                    $('#messageInput').prop('disabled', true);
+                    $('#sendBtn').prop('disabled', true);
+                    $('#leaveBtn').prop('disabled', true);
+                    $('#chatBox').empty();
+                },
+                error: function (err) {
+                    alert("Failed to leave room.");
+                    console.error(err);
+                }
+            });
+        }
+
+        function connectWebSocket() {
+            // [WebSocket 연결 및 STOMP 구독 로직]
+            // - 로직 설명:
+            //   1. 기존에 연결된 소켓이 있으면 안전하게 끊습니다.
+            //   2. '/ws-chat' 경로로 SockJS 연결을 맺고 STOMP 클라이언트를 초기화합니다.
+            //   3. 연결 성공 후 '/sub/chat/room/{roomId}' 경로를 구독(subscribe)하여 서버로부터 오는 실시간 브로드캐스트 메시지를 대기합니다.
+            //   * 참고: 이 테스트 파일에서는 READ, LEAVE 등의 타입을 세세하게 나누어 처리하지 않고, 수신된 모든 메시지를 단순히 화면에 출력(displayMessage)합니다.
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+
+            const socket = new SockJS('/ws-chat');
+            stompClient = Stomp.over(socket);
+            // stompClient.debug = null; // Disable debug logs
+
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+
+                // 해당 방 구독
+                stompClient.subscribe('/sub/chat/room/' + currentRoomId, function (messageOutput) {
+                    const messageData = JSON.parse(messageOutput.body);
+                    displayMessage(messageData);
+                });
+            });
+        }
+
+        function sendMessage() {
+            // [일반 메시지 전송 함수]
+            // - 목적: 채팅 텍스트를 서버로 실시간 전송합니다.
+            // - Endpoint (WebSocket PUB): /pub/chat/message
+            // - Request JSON 형태: 
+            //   {
+            //     "chatRoomId": 현재채팅방ID(Number),
+            //     "senderId": 작성자본인ID(Number),
+            //     "message": "입력한 텍스트"
+            //   }
+            // - 로직 설명: 입력창의 내용을 가져와 JSON 형태로 직렬화한 뒤, STOMP를 통해 서버로 발송합니다.
+            const content = $('#messageInput').val().trim();
+            if (content && stompClient && currentRoomId) {
+                const chatMessageReq = {
+                    chatRoomId: currentRoomId,
+                    senderId: currentUserId,
+                    message: content
+                };
+                // STOMP로 메시지 전송
+                stompClient.send("/pub/chat/message", {}, JSON.stringify(chatMessageReq));
+                $('#messageInput').val('');
+            }
+        }
+
+        function displayMessage(msg) {
+            const isMe = msg.senderId == currentUserId;
+            const msgClass = isMe ? 'message my-message' : 'message';
+            const senderText = isMe ? 'Me' : `User ${msg.senderId}`;
+
+            const html = `
+            <div class="${msgClass}">
+                <div class="message-sender">${senderText}</div>
+                <div class="message-text">${msg.message}</div>
+            </div>
+        `;
+            const chatBox = $('#chatBox');
+            chatBox.append(html);
+            chatBox.scrollTop(chatBox[0].scrollHeight);
+        }
+
+        // Enter key support
+        $('#messageInput').keypress(function (e) {
+            if (e.which == 13) {
+                sendMessage();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

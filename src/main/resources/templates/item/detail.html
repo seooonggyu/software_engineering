@@ -77,6 +77,17 @@
     });
 
     // 상세 데이터 조회 (GET)
+    // [프론트엔드 개발자 참고용 주석]
+    // - Endpoint: GET /api/item
+    // - Request Header: Authorization: Bearer {accessToken}
+    // - Request Parameter: Query String (id={final_id})
+    // - Response JSON:
+    //   {
+    //     "id": 1, "title": "...", "content": "...", "upperRegion": "...", "lowerRegion": "...", 
+    //     "district": "...", "detail": "...", "startTime": "...", "endTime": "...", 
+    //     "category": "ELECTRONICS", "status": "LOST", ...
+    //   }
+    // - 로직 설명: 페이지 접속 시 URL에서 추출한 id를 이용해 아이템 상세 정보를 조회하고 각 input 및 select 요소에 값을 채워넣습니다.
     function detail_item() {
         $.ajax({
             url: "/api/item",
@@ -112,6 +123,28 @@
     }
 
     // 데이터 수정 (PUT)
+    // [프론트엔드 개발자 참고용 주석]
+    // - Endpoint: PUT /api/item
+    // - Request Header: Authorization: Bearer {accessToken}
+    // - Request JSON (payload):
+    //   {
+    //     "id": "아이템 ID",
+    //     "title": "수정할 제목",
+    //     "content": "수정할 내용",
+    //     "upperRegion": "도/광역시",
+    //     "lowerRegion": "시/군/구",
+    //     "district": "동/읍/면",
+    //     "detail": "상세주소",
+    //     "startTime": "YYYY-MM-DDTHH:mm",
+    //     "endTime": "YYYY-MM-DDTHH:mm",
+    //     "category": "카테고리 Enum (예: ELECTRONICS)",
+    //     "status": "상태 Enum (예: LOST, FOUND)"
+    //   }
+    // - Response: HTTP 200 OK (성공 시)
+    // - 로직 설명: 
+    //   화면의 입력 폼(input, select)에서 최신 값들을 가져와 _param 객체를 생성합니다.
+    //   생성된 객체를 JSON 문자열로 변환하여 서버에 수정 요청을 보냅니다.
+    //   성공 시 알림을 띄우고 페이지를 새로고침(location.reload)하여 수정된 내역을 반영합니다.
     function update_item() {
         let _param = {
             id: final_id,
