@@ -119,6 +119,12 @@
     </div>
 
     <button class="btn_login" onclick="login_user()">로그인</button>
+    
+    <!-- 구글 로그인 버튼 추가 -->
+    <button class="btn_login" style="background-color: #ffffff; color: #757575; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 10px;" onclick="location.href='/oauth2/authorization/google'">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo" style="width: 20px; height: 20px;">
+        Google 계정으로 로그인
+    </button>
 
     <div class="signup-link-container">
         <span style="color: #858796;">계정이 없으신가요?</span>
@@ -177,6 +183,17 @@
             },
         });
     }
+
+    // 페이지 로드 시 URL 파라미터에서 error 메시지 확인 (OAuth2 로그인 실패 시)
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorMsg = urlParams.get('error');
+        if (errorMsg) {
+            alert(errorMsg);
+            // 에러 메시지를 보여준 후 URL에서 파라미터 제거
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
 </script>
 
 </body>

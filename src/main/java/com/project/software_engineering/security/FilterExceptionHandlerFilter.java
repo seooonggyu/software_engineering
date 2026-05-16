@@ -25,9 +25,16 @@ public class FilterExceptionHandlerFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (ExpiredJwtException e){
-            System.out.println("filter UNAUTHORIZED!!!");
-            //throw new NoAuthException("Invalid Access Token");
-
+            System.out.println("filter UNAUTHORIZED (Expired)!!!");
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            try{
+                response.getWriter().write("Expired Access Token");
+            }catch (IOException i){
+                i.printStackTrace();
+            }
+        } catch (com.project.software_engineering.exception.InvalidTokenException | io.jsonwebtoken.JwtException | java.lang.ClassCastException e) {
+            System.out.println("filter UNAUTHORIZED (Invalid)!!!");
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             try{

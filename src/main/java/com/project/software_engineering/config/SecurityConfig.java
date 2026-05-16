@@ -26,14 +26,20 @@ public class SecurityConfig {
 	private final ObjectMapper objectMapper;
 	private final AuthService authService;
 	private final ExternalProperties externalProperties;
+	private final CustomOAuth2UserService customOAuth2UserService;
+	private final OAuth2SuccessHandler oAuth2SuccessHandler;
+	private final OAuth2FailureHandler oAuth2FailureHandler;
 
 	public SecurityConfig(UserRepository userRepository, CorsFilterConfiguration corsFilterConfiguration, ObjectMapper objectMapper, AuthService authService
-			, ExternalProperties externalProperties) {
+			, ExternalProperties externalProperties, CustomOAuth2UserService customOAuth2UserService, OAuth2SuccessHandler oAuth2SuccessHandler, OAuth2FailureHandler oAuth2FailureHandler) {
 		this.userRepository = userRepository;
 		this.corsFilterConfiguration = corsFilterConfiguration;
 		this.objectMapper = objectMapper;
 		this.authService = authService;
 		this.externalProperties = externalProperties;
+		this.customOAuth2UserService = customOAuth2UserService;
+		this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+		this.oAuth2FailureHandler = oAuth2FailureHandler;
 	}
 
 	@Bean
@@ -59,7 +65,13 @@ public class SecurityConfig {
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
 				.sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+				.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+				.oauth2Login(oauth2 -> oauth2
+						.redirectionEndpoint(redirection -> redirection.baseUri("/login/oauth2/*"))
+						.userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+						.successHandler(oAuth2SuccessHandler)
+						.failureHandler(oAuth2FailureHandler)
+				);
 
 		// 2. 커스텀 필터 인스턴스 생성 및 세팅
 		JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager, objectMapper, authService, externalProperties);

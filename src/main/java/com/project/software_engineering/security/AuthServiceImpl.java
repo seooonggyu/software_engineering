@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
 					.parseClaimsJws(accessToken)
 					.getBody();
 
-			return claims.get("id", Long.class); // "id" 값을 Long 타입으로 안전하게 추출
+			return claims.get("id", Number.class).longValue(); // "id" 값을 안전하게 추출
 		} catch (JwtException e) {
 			// 토큰 만료, 서명 오류 등 모든 JWT 관련 예외를 잡아서 커스텀 예외로 던짐
 			throw new InvalidTokenException("유효하지 않은 Access Token입니다.");
@@ -121,7 +121,7 @@ public class AuthServiceImpl implements AuthService {
 					.parseClaimsJws(refreshToken)
 					.getBody();
 
-			return claims.get("id", Long.class);
+			return claims.get("id", Number.class).longValue();
 		} catch (JwtException e) {
 			throw new InvalidTokenException("유효하지 않거나 만료된 Refresh Token입니다.");
 		}
