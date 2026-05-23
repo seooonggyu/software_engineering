@@ -8,6 +8,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 public class ItemDto {
@@ -46,10 +47,14 @@ public class ItemDto {
         private LocalDateTime startTime;
         private LocalDateTime endTime;
         private Location location;
+        private Long userId;
+        private String userUsername;
+        private List<String> imageUrls;
     }
 
     @Getter @Setter @SuperBuilder @NoArgsConstructor @AllArgsConstructor
     public static class ListReqDto extends DefaultDto.ListReqDto{
         String title;
+        private Location location;
     }
 }

@@ -15,13 +15,15 @@ public class ChatDto {
         private Long otherUserId;
         private String otherUsername;
         private String otherUserName;
-        
+        private int unreadCount;
+
         @Builder
-        public ChatRoomRes(Long id, Long otherUserId, String otherUsername, String otherUserName) {
+        public ChatRoomRes(Long id, Long otherUserId, String otherUsername, String otherUserName, int unreadCount) {
             this.id = id;
             this.otherUserId = otherUserId;
             this.otherUsername = otherUsername;
             this.otherUserName = otherUserName;
+            this.unreadCount = unreadCount;
         }
     }
 

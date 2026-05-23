@@ -5,9 +5,11 @@ import com.project.software_engineering.domain.Item;
 import com.project.software_engineering.domain.Location;
 import com.project.software_engineering.dto.DefaultDto;
 import com.project.software_engineering.dto.ItemDto;
+import jakarta.transaction.Transactional;
 import com.project.software_engineering.exception.NoMatchingDataException;
 import com.project.software_engineering.mapper.ItemMapper;
 import com.project.software_engineering.repository.ItemRepository;
+import com.project.software_engineering.repository.UserRepository;
 import com.project.software_engineering.service.ItemService;
 import com.project.software_engineering.service.PermittedService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class ItemServiceImpl implements ItemService {
 
     private final PermittedService permittedService;
     private final ItemRepository itemRepository;
+    private final UserRepository userRepository;
     private final ItemMapper itemMapper;
 
     @Override
@@ -35,6 +38,7 @@ public class ItemServiceImpl implements ItemService {
         permittedService.isPermitted(reqUserId, target, 200);
 
         Item item = param.toEntity();
+        item.setUserId(reqUserId);
 
         String projectPath = System.getProperty("user.dir");
         String uploadDir = projectPath + "/src/main/resources/static/images/";
@@ -77,9 +81,21 @@ public class ItemServiceImpl implements ItemService {
         return itemRepository.save(item).toCreateResDto();
     }
 
+    @Transactional
     public ItemDto.DetailResDto get(DefaultDto.DetailReqDto param, Long reqUserId) {
         permittedService.isPermitted(reqUserId, target, 200);
         ItemDto.DetailResDto res = itemMapper.detail(param.getId());
+        itemRepository.findById(param.getId()).ifPresent(item -> {
+            List<String> urls = item.getImages().stream()
+                    .map(Images::getImageUrl)
+                    .collect(java.util.stream.Collectors.toList());
+            res.setImageUrls(urls);
+
+            if (item.getUserId() != null) {
+                userRepository.findById(item.getUserId())
+                        .ifPresent(user -> res.setUserUsername(user.getUsername()));
+            }
+        });
         return res;
     }
     @Override

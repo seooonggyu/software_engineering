@@ -49,11 +49,13 @@ public class ChatServiceImpl implements ChatService {
 
         return chatRooms.stream().map(room -> {
             User otherUser = room.getUser1().getId().equals(userId) ? room.getUser2() : room.getUser1();
+            int unread = (int) chatMessageRepository.countUnread(room, userId);
             return ChatDto.ChatRoomRes.builder()
                     .id(room.getId())
                     .otherUserId(otherUser.getId())
                     .otherUsername(otherUser.getUsername())
                     .otherUserName(otherUser.getName())
+                    .unreadCount(unread)
                     .build();
         }).collect(Collectors.toList());
     }

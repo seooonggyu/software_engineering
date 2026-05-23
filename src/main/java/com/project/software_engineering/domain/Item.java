@@ -30,6 +30,9 @@ public class Item extends AuditingFields{
     @Enumerated(EnumType.STRING)
     private ItemStatus status; // 상태 관리 추가
 
+    @Column(name = "user_id")
+    private Long userId;
+
     protected Item() {}
     private Item(String title, String content, Location location, LocalDateTime startTime, LocalDateTime endTime, Category category, ItemStatus status) {
         this.title = title;
