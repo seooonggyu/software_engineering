@@ -16,6 +16,7 @@
 			 , item.status
 			 , item.start_time as startTime
 			 , item.end_time as endTime
+			 , item.user_id as userId
 		FROM item
 		WHERE item.id = #{id}
 	</select>
@@ -27,6 +28,7 @@
 		<if test="sdate != null and sdate != ''">AND item.created_at >= CONCAT(#{sdate}, ' 00:00:00')</if>
 		<if test="fdate != null and fdate != ''">AND CONCAT(#{fdate}, ' 23:59:59') >= item.created_at</if>
 		<if test = "title != null and title !=''">AND item.title LIKE CONCAT('%', #{title}, '%')</if>
+		<if test = "location != null">AND item.location = #{location}</if>
 	</sql>
 
 	<select id="list" parameterType="hashMap" resultType="com.project.software_engineering.dto.ItemDto$DetailResDto">
