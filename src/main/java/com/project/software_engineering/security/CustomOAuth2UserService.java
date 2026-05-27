@@ -43,7 +43,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String email = oAuth2UserInfo.getEmail();
         
         // 한동대학교 이메일(@handong.ac.kr, @handong.edu)만 허용
-        if (email == null || (!email.endsWith("@handong.ac.kr") && !email.endsWith("@handong.edu"))) {
+//        if (email == null || (!email.endsWith("@handong.ac.kr") && !email.endsWith("@handong.edu"))) {
+//            throw new OAuth2AuthenticationException("허용되지 않은 이메일 도메인입니다. 한동대학교 이메일로 로그인해주세요.");
+//        }
+        if (email == null) {
             throw new OAuth2AuthenticationException("허용되지 않은 이메일 도메인입니다. 한동대학교 이메일로 로그인해주세요.");
         }
 
