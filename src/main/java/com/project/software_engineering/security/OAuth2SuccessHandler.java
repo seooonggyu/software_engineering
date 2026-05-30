@@ -24,8 +24,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String accessToken = authService.createAccessToken(principalDetails.getUser().getId());
         String refreshToken = authService.createRefreshToken(principalDetails.getUser().getId());
 
-        // 프론트엔드(Thymeleaf) 연동을 위한 콜백 페이지로 리다이렉트
-        String targetUrl = "http://localhost:8080/user/oauth2-success";
+        // React 프론트엔드 콜백 페이지로 리다이렉트
+        String targetUrl = "http://localhost:5173/oauth2/callback";
 
         // Query Param 방식으로 전달 (또는 쿠키로 설정 가능)
         String redirectUrl = targetUrl + "?accessToken=" + accessToken + "&refreshToken=" + refreshToken;

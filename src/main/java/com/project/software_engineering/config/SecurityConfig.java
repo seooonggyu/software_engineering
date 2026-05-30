@@ -67,7 +67,7 @@ public class SecurityConfig {
 				.sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
 				.oauth2Login(oauth2 -> oauth2
-						.redirectionEndpoint(redirection -> redirection.baseUri("/login/oauth2/*"))
+						.redirectionEndpoint(redirection -> redirection.baseUri("/login/oauth2/code/*"))
 						.userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
 						.successHandler(oAuth2SuccessHandler)
 						.failureHandler(oAuth2FailureHandler)

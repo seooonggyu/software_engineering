@@ -38,3 +38,4 @@ out/
 
 ### Custom Secret Files ###
 application.yaml
+application.properties

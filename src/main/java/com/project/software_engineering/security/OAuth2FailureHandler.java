@@ -17,7 +17,7 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
         // 로그인 실패 시 프론트엔드의 로그인 페이지로 리다이렉트하여 에러 메시지 표시
-        String targetUrl = "http://localhost:8080/user/login";
+        String targetUrl = "http://localhost:5173";
 
         String errorMessage = exception.getMessage();
         String encodedErrorMessage = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);

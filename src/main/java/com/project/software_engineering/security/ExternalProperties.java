@@ -1,10 +1,12 @@
 package com.project.software_engineering.security;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Getter
+@Setter
 @Component
 public class ExternalProperties {
 
@@ -18,13 +20,13 @@ public class ExternalProperties {
 	private String accessKey;
 
 	@Value("${external.jwt.accessTokenExpirationTime}")
-	private Integer accessTokenExpirationTime;
+	private Long accessTokenExpirationTime;
 
 	@Value("${external.jwt.refreshKey}")
 	private String refreshKey;
-	
+
 	@Value("${external.jwt.refreshTokenExpirationTime}")
-	private Integer refreshTokenExpirationTime;
+	private Long refreshTokenExpirationTime;
 
 //	@Value("${github.base-url}")
 //	private String githubBaseUrl;
