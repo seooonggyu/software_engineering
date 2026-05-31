@@ -29,11 +29,12 @@ public class ItemRestController {
         return principalDetails.getUser().getId();
     }
 
-    @PreAuthorize("hasRole('USER')")
-//    @PreAuthorize("permitAll()")
+    @PreAuthorize("permitAll()") // 임시로 테스트를 위해 권한 해제 (hasRole('USER') -> permitAll())
+//    @PreAuthorize("hasRole('USER')")
     @PostMapping("")
     public ResponseEntity<DefaultDto.CreateResDto> create(@RequestPart(value = "params") ItemDto.CreateReqDto params, @RequestPart(value = "files", required = false) List<MultipartFile> images, @AuthenticationPrincipal PrincipalDetails principalDetails){
         Long reqUserId = getReqUserId(principalDetails);
+        if(reqUserId == null) reqUserId = -200L; // 테스트용 더미 유저 ID 할당 (권한 우회)
         return ResponseEntity.ok(itemService.create(params, images, reqUserId));
     }
 
@@ -66,6 +67,17 @@ public class ItemRestController {
         itemService.delete(params, reqUserId);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
+
+    private final com.project.software_engineering.service.AIService aiService;
+
+    @PreAuthorize("permitAll()") // 임시로 테스트를 위해 권한 해제
+    // @PreAuthorize("hasRole('USER')")
+    @GetMapping("/{id}/matches")
+    public ResponseEntity<com.project.software_engineering.dto.AIDto.LostItemRegisterResDto> getMatches(@PathVariable Long id, @AuthenticationPrincipal PrincipalDetails principalDetails){
+        // 권한 확인 등은 생략하거나 추가 가능
+        return ResponseEntity.ok(aiService.getMatchesForLostItem(id));
+    }
+
 
 //    final UserService userService;
 //    final ExternalProperties externalProperties;

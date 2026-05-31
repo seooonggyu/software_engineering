@@ -32,6 +32,8 @@ public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final ItemMapper itemMapper;
+    private final com.project.software_engineering.service.AIService aiService;
+    private final com.project.software_engineering.service.S3Service s3Service;
 
     @Override
     public DefaultDto.CreateResDto create(ItemDto.CreateReqDto param, List<MultipartFile> images, Long reqUserId) {
@@ -40,45 +42,32 @@ public class ItemServiceImpl implements ItemService {
         Item item = param.toEntity();
         item.setUserId(reqUserId);
 
-        String projectPath = System.getProperty("user.dir");
-        String uploadDir = projectPath + "/src/main/resources/static/images/";
-
-        File dir = new File(uploadDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-
         if (images != null && !images.isEmpty()) {
             for (MultipartFile file : images) {
                 if (!file.isEmpty()) {
-                    try {
-                        // 원본 파일명 추출
-                        String originalFilename = file.getOriginalFilename();
+                    // S3에 파일 업로드하고 반환된 퍼블릭 URL 받기
+                    String s3Url = s3Service.uploadFile(file);
 
-                        // 파일명 중복을 막기 위해 UUID 생성 (예: 123e4567-e89b-12d3_myphoto.jpg)
-                        String uuid = UUID.randomUUID().toString();
-                        String savedFileName = uuid + "_" + originalFilename;
+                    // Images 엔티티 생성 (DB에는 S3 전체 주소 저장)
+                    Images imageEntity = new Images(s3Url);
 
-                        // 실제 폴더에 파일 저장 (Transfer)
-                        File saveFile = new File(uploadDir, savedFileName);
-                        file.transferTo(saveFile);
-
-                        // Images 엔티티 생성 (DB에는 브라우저에서 접근할 URL 경로로 저장)
-                        // src/main/resources/static 에 있는 파일은 도메인 바로 뒤부터 접근 가능하므로 "/images/파일명" 형태로 저장
-                        Images imageEntity = new Images("/images/" + savedFileName);
-
-                        // Item 엔티티에 만들어둔 편의 메서드로 연관관계 매핑
-                        item.addImage(imageEntity);
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        throw new RuntimeException("파일 저장 중 오류가 발생했습니다.");
-                    }
+                    // Item 엔티티에 연관관계 매핑
+                    item.addImage(imageEntity);
                 }
             }
         }
 
-        return itemRepository.save(item).toCreateResDto();
+        item = itemRepository.save(item);
+
+        // 등록 후 AI 서버 비동기 호출 (ID가 생성된 후)
+        if (!item.getImages().isEmpty()) {
+            List<String> imagePaths = item.getImages().stream()
+                    .map(com.project.software_engineering.domain.Images::getImageUrl)
+                    .toList();
+            aiService.registerItemToAIAsync(item, imagePaths);
+        }
+
+        return item.toCreateResDto();
     }
 
     @Transactional

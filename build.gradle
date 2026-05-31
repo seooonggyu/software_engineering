@@ -46,6 +46,10 @@ dependencies {
     // WebSocket 사용을 위함
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
+    // AWS S3 사용을 위함
+    implementation platform('software.amazon.awssdk:bom:2.25.11')
+    implementation 'software.amazon.awssdk:s3'
+
     //thymeleaf 재기동 없이 실행하기 위한 코드
     compileOnly("org.springframework.boot:spring-boot-devtools")
 }

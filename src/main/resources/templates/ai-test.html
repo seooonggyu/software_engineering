@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 연동 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .result-box { background: #f9f9f9; border: 1px solid #ddd; padding: 10px; min-height: 50px; white-space: pre-wrap; margin-top: 10px; }
+        h2 { margin-top: 0; }
+        input, select, button { margin: 5px 0; padding: 5px; }
+    </style>
+</head>
+<body>
+
+<h1>AI 연동 테스트 페이지</h1>
+<p style="color: red;">*주의: 백엔드 API가 인증을 요구하므로 먼저 일반 로그인 페이지를 통해 <b>로그인된 상태</b>여야 정상 동작합니다.</p>
+
+<div class="section">
+    <h2>1. 아이템 등록 (분실물/습득물)</h2>
+    <form id="createForm">
+        <label>제목: <input type="text" id="title" required value="테스트 분실물"></label><br>
+        <label>내용: <input type="text" id="content" required value="테스트용 내용입니다"></label><br>
+        <label>상태: 
+            <select id="status">
+                <option value="LOST">분실물 (LOST)</option>
+                <option value="FOUND">습득물 (FOUND)</option>
+            </select>
+        </label><br>
+        <label>카테고리: 
+            <select id="category">
+                <option value="ELECTRONICS">전자기기</option>
+                <option value="WALLET">지갑/현금</option>
+                <option value="OTHERS">기타</option>
+            </select>
+        </label><br>
+        <label>이미지 파일: <input type="file" id="files" multiple required></label><br><br>
+        <button type="submit">등록 (백엔드 저장 & AI 서버 전송)</button>
+    </form>
+    <div class="result-box" id="createResult">등록 결과가 여기에 표시됩니다.</div>
+</div>
+
+<div class="section">
+    <h2>2. 매칭 결과 조회 (분실물 전용)</h2>
+    <label>분실물 ID (숫자): <input type="number" id="lostId" required></label>
+    <button onclick="getMatches()">조회 (AI 서버에 요청)</button>
+    <div class="result-box" id="matchResult">매칭 조회 결과가 여기에 표시됩니다.</div>
+</div>
+
+<script>
+    document.getElementById('createForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const resultBox = document.getElementById('createResult');
+        resultBox.innerText = "등록 중...";
+
+        const params = {
+            title: document.getElementById('title').value,
+            content: document.getElementById('content').value,
+            status: document.getElementById('status').value,
+            category: document.getElementById('category').value
+        };
+
+        const formData = new FormData();
+        // params는 Blob 형태로 추가 (Spring Boot @RequestPart("params") 처리용)
+        formData.append("params", new Blob([JSON.stringify(params)], { type: "application/json" }));
+        
+        const files = document.getElementById('files').files;
+        for (let i = 0; i < files.length; i++) {
+            formData.append("files", files[i]);
+        }
+
+        fetch('/api/item', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("HTTP error " + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            resultBox.innerText = "성공!\n백엔드 DB ID: " + data.id + "\n\n백그라운드에서 AI 서버로 비동기 전송되었습니다. (AI 서버 로그 확인 필요)";
+        })
+        .catch(error => {
+            resultBox.innerText = "에러 발생: " + error.message;
+        });
+    });
+
+    function getMatches() {
+        const id = document.getElementById('lostId').value;
+        const resultBox = document.getElementById('matchResult');
+        if (!id) {
+            alert("ID를 입력하세요.");
+            return;
+        }
+
+        resultBox.innerText = "조회 중...";
+
+        fetch('/api/item/' + id + '/matches')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("HTTP error " + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            resultBox.innerText = JSON.stringify(data, null, 2);
+        })
+        .catch(error => {
+            resultBox.innerText = "에러 발생: " + error.message;
+        });
+    }
+</script>
+
+</body>
+</html>
