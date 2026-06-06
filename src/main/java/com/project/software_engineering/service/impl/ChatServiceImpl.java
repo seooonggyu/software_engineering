@@ -37,7 +37,7 @@ public class ChatServiceImpl implements ChatService {
                 .id(chatRoom.getId())
                 .otherUserId(user2.getId())
                 .otherUsername(user2.getUsername())
-                .otherUserName(user2.getName())
+                .otherName(user2.getName())
                 .build();
     }
 
@@ -50,12 +50,17 @@ public class ChatServiceImpl implements ChatService {
         return chatRooms.stream().map(room -> {
             User otherUser = room.getUser1().getId().equals(userId) ? room.getUser2() : room.getUser1();
             int unread = (int) chatMessageRepository.countUnread(room, userId);
+            ChatMessage lastMessage = chatMessageRepository
+                    .findFirstByChatRoomAndDeletedFalseOrderByCreatedAtDesc(room)
+                    .orElse(null);
             return ChatDto.ChatRoomRes.builder()
                     .id(room.getId())
                     .otherUserId(otherUser.getId())
                     .otherUsername(otherUser.getUsername())
-                    .otherUserName(otherUser.getName())
+                    .otherName(otherUser.getName())
                     .unreadCount(unread)
+                    .lastMessage(lastMessage != null ? lastMessage.getMessage() : null)
+                    .lastMessageAt(lastMessage != null ? lastMessage.getCreatedAt() : null)
                     .build();
         }).collect(Collectors.toList());
     }
@@ -71,6 +76,7 @@ public class ChatServiceImpl implements ChatService {
                         .chatRoomId(msg.getChatRoom().getId())
                         .senderId(msg.getSender().getId())
                         .senderUsername(msg.getSender().getUsername())
+                        .senderName(msg.getSender().getName())
                         .message(msg.getMessage())
                         .isRead(msg.isRead())
                         .createdAt(msg.getCreatedAt())
@@ -95,6 +101,7 @@ public class ChatServiceImpl implements ChatService {
                 .chatRoomId(chatRoom.getId())
                 .senderId(sender.getId())
                 .senderUsername(sender.getUsername())
+                .senderName(sender.getName())
                 .message(chatMessage.getMessage())
                 .isRead(chatMessage.isRead())
                 .createdAt(createdAt)

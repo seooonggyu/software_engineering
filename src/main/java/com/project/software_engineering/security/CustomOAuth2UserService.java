@@ -57,6 +57,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if (userEntity == null) {
             userEntity = User.of(username, password, name, 3100);
             userRepository.save(userEntity);
+        } else if (name != null && !name.isBlank()
+                && (userEntity.getName() == null || userEntity.getName().isBlank())) {
+            // 이름 없이 생성된 기존 구글 계정에 이름을 채워준다 (채팅 목록 등에서 구글 ID 대신 이름 표시)
+            userEntity.setName(name);
+            userRepository.save(userEntity);
         }
 
         return new PrincipalDetails(userEntity, oAuth2User.getAttributes());
