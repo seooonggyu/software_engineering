@@ -77,7 +77,10 @@ public class ItemServiceImpl implements ItemService {
 
             if (item.getUserId() != null) {
                 userRepository.findById(item.getUserId())
-                        .ifPresent(user -> res.setUserUsername(user.getUsername()));
+                        .ifPresent(user -> {
+                            res.setUserUsername(user.getUsername());
+                            res.setUserName(user.getName());
+                        });
             }
         });
         return res;

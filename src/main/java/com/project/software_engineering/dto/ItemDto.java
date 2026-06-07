@@ -49,6 +49,7 @@ public class ItemDto {
         private Location location;
         private Long userId;
         private String userUsername;
+        private String userName;
         private List<String> imageUrls;
     }
 
