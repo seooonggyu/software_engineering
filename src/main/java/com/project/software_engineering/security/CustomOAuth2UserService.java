@@ -44,7 +44,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if (email == null) {
             throw new OAuth2AuthenticationException("이메일이 없는 계정입니다.");
         }
-
+        String name = oAuth2UserInfo.getName();
         User userEntity = userRepository.findByUsername(username);
         if (userEntity == null) {
             userEntity = User.of(username, password, oAuth2UserInfo.getName(), 3100);
