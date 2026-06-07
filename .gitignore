@@ -39,3 +39,7 @@ out/
 ### Custom Secret Files ###
 application.yaml
 application.properties
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
