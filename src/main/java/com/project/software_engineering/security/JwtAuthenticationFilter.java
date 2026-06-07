@@ -16,55 +16,40 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 
+/**
+ * "/api/login" 요청에서 자격을 검증하고 Refresh Token을 발급하는 필터
+ */
 @Transactional
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
-	private final AuthenticationManager authenticationManager;
-	private final ObjectMapper objectMapper;
-	private final AuthService authService;
-	private final ExternalProperties externalProperties;
+    private final AuthenticationManager authenticationManager;
+    private final ObjectMapper objectMapper;
+    private final AuthService authService;
+    private final ExternalProperties externalProperties;
 
-	/**
-     *  로그인하려는 사용자의 자격을 확인해 토큰을 발급하는 함수.
-	 *  "/api/login" 으로 들어오는 요청에 실행된다.
-	 *  생성된 Authentication이 SecurityContextHolder에 등록되어 권한처리가 가능하게 한다.
-	 *  
-	 *  @throws AuthenticationException
-	 */
-	@Transactional
-	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
-		Authentication authentication = null;
-		UserDto.LoginReqDto userLoginDto = null;
+    // 로그인 시도: username/password로 인증 처리
+    @Transactional
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
+            throws AuthenticationException {
+        try {
+            UserDto.LoginReqDto userLoginDto = objectMapper.readValue(request.getInputStream(), UserDto.LoginReqDto.class);
+            UsernamePasswordAuthenticationToken authenticationToken =
+                    new UsernamePasswordAuthenticationToken(userLoginDto.getUsername(), userLoginDto.getPassword());
+            return authenticationManager.authenticate(authenticationToken);
+        } catch (IOException | AuthenticationException e) {
+            return null;
+        }
+    }
 
-		//1번. 로그인에 필요한 아이디(username)이랑 비번(password)가 있는지 먼저 확인!!!
-		try {
-			userLoginDto = objectMapper.readValue(request.getInputStream(), UserDto.LoginReqDto.class);
-		} catch (IOException e) {
-			System.out.println("1. login attemptAuthentication : Not Enough Parameters?!");
-		}
-
-		//1번. 로그인에 필요한 아이디(username)이랑 비번(password)으로 실제 존재하는 고객인지 확인!!!
-		//=> 그 정보로 Authentication 객체를 만들꺼에요!!!
-		try {
-			UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userLoginDto.getUsername(), userLoginDto.getPassword());
-			authentication = authenticationManager.authenticate(authenticationToken);
-		} catch (AuthenticationException e) {
-			System.out.println("2. login attemptAuthentication : username, password Not Mathced?!");
-		}
-		
-		return authentication;
-	} 
-	
-	/**
-     *  로그인 완료시 호출되는 함수.
-     *  Refresh Token을 발급해 HttpServletRespons에 담는다.
-	 */
-	@Override
-	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
-		PrincipalDetails principalDetails = (PrincipalDetails)authResult.getPrincipal();
-		String refreshToken = authService.createRefreshToken(principalDetails.getUser().getId());
-		response.addHeader(externalProperties.getRefreshKey(), externalProperties.getTokenPrefix() + refreshToken);
-	}
-	
+    // 로그인 성공 시 Refresh Token 발급
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
+                                            FilterChain chain, Authentication authResult)
+            throws IOException, ServletException {
+        PrincipalDetails principalDetails = (PrincipalDetails) authResult.getPrincipal();
+        String refreshToken = authService.createRefreshToken(principalDetails.getUser().getId());
+        response.addHeader(externalProperties.getRefreshKey(), externalProperties.getTokenPrefix() + refreshToken);
+    }
 }

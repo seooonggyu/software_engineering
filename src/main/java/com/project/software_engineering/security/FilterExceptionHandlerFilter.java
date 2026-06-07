@@ -11,38 +11,30 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * 필터 체인에서 발생하는 JWT 예외를 잡아 401 응답을 반환하는 필터
+ */
 public class FilterExceptionHandlerFilter extends OncePerRequestFilter {
 
-	/**
-     *  TokenExpiredException 핸들링을 위한 필터
-	 *  상태코드 UNAUTHORIZED(401)을 response에 담아 리턴한다
-	 */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        try{
-        	System.out.println("filter start!!!");
-        	System.out.println("filter request!!!" + request.getAttribute("credential"));
-
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        try {
             filterChain.doFilter(request, response);
-        } catch (ExpiredJwtException e){
-            System.out.println("filter UNAUTHORIZED (Expired)!!!");
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            try{
-                response.getWriter().write("Expired Access Token");
-            }catch (IOException i){
-                i.printStackTrace();
-            }
-        } catch (com.project.software_engineering.exception.InvalidTokenException | io.jsonwebtoken.JwtException | java.lang.ClassCastException e) {
-            System.out.println("filter UNAUTHORIZED (Invalid)!!!");
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            try{
-                response.getWriter().write("Invalid Access Token");
-            }catch (IOException i){
-                i.printStackTrace();
-            }
+        } catch (ExpiredJwtException e) {
+            writeUnauthorized(response, "Expired Access Token");
+        } catch (com.project.software_engineering.exception.InvalidTokenException | io.jsonwebtoken.JwtException | ClassCastException e) {
+            writeUnauthorized(response, "Invalid Access Token");
         }
     }
-	
+
+    private void writeUnauthorized(HttpServletResponse response, String message) {
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        try {
+            response.getWriter().write(message);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

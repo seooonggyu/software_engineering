@@ -2,8 +2,8 @@ package com.project.software_engineering.service.impl;
 
 import com.project.software_engineering.domain.PermissionDetail;
 import com.project.software_engineering.dto.DefaultDto;
-import com.project.software_engineering.dto.PermissionDto;
 import com.project.software_engineering.dto.PermissionDetailDto;
+import com.project.software_engineering.dto.PermissionDto;
 import com.project.software_engineering.exception.NoMatchingDataException;
 import com.project.software_engineering.mapper.PermissionDetailMapper;
 import com.project.software_engineering.repository.PermissionDetailRepository;
@@ -25,23 +25,25 @@ public class PermissionDetailServiceimpl implements PermissionDetailService {
     private final PermissionDetailMapper permissionDetailMapper;
     private final PermittedService permittedService;
 
+    // 특정 타겟에 대한 접근 허용 여부 반환
     @Override
     public PermissionDetailDto.AllowResDto allow(PermissionDto.ExistReqDto param, Long reqUserId) {
         List<PermissionDetailDto.DetailResDto> list = permissionDetailMapper.access(param);
         return PermissionDetailDto.AllowResDto.builder().allowed(!(list == null || list.isEmpty())).build();
     }
 
+    // 현재 유저가 접근 가능한 권한 상세 목록 반환
     @Override
     public List<PermissionDetailDto.DetailResDto> access(PermissionDto.ExistReqDto param, Long reqUserId) {
         return detailList(permissionDetailMapper.access(param), (long) -200);
     }
 
+    // 권한 상세 토글 (활성/비활성 전환)
     @Override
     public DefaultDto.CreateResDto toggle(PermissionDetailDto.ToggleReqDto param, Long reqUserId) {
         PermissionDetail permissionDetail = permissionDetailRepository.findByPermissionIdAndTargetAndFunc(param.getPermissionId(), param.getTarget(), param.getFunc());
-        if(permissionDetail == null) {
-            //없는데 생성하라고 하네!
-            if(param.getAlive()){
+        if (permissionDetail == null) {
+            if (param.getAlive()) {
                 return create(PermissionDetailDto.CreateReqDto.builder()
                         .permissionId(param.getPermissionId())
                         .target(param.getTarget())
@@ -50,20 +52,19 @@ public class PermissionDetailServiceimpl implements PermissionDetailService {
             }
         } else {
             permittedService.isPermitted(reqUserId, target, 120);
-            //있는데 바꿔주기!
             permissionDetail.setDeleted(!param.getAlive());
             return permissionDetailRepository.save(permissionDetail).toCreateResDto();
         }
         return DefaultDto.CreateResDto.builder().id((long) -100).build();
     }
 
-    /**/
+    // 권한 상세 생성
     @Override
     public DefaultDto.CreateResDto create(PermissionDetailDto.CreateReqDto param, Long reqUserId) {
-        DefaultDto.CreateResDto res = permissionDetailRepository.save(param.toEntity()).toCreateResDto();
-        return res;
+        return permissionDetailRepository.save(param.toEntity()).toCreateResDto();
     }
 
+    // 권한 상세 수정
     @Override
     public void update(PermissionDetailDto.UpdateReqDto param, Long reqUserId) {
         permittedService.isPermitted(reqUserId, target, 120);
@@ -72,6 +73,7 @@ public class PermissionDetailServiceimpl implements PermissionDetailService {
         permissionDetailRepository.save(permissionDetail);
     }
 
+    // 권한 상세 삭제 (소프트 딜리트)
     @Override
     public void delete(DefaultDto.DeleteReqDto param, Long reqUserId) {
         update(PermissionDetailDto.UpdateReqDto.builder().id(param.getId()).deleted(true).build(), reqUserId);
@@ -79,15 +81,15 @@ public class PermissionDetailServiceimpl implements PermissionDetailService {
 
     @Override
     public void deleteList(DefaultDto.DeleteListReqDto param, Long reqUserId) {
-        for(Long id : param.getIds()){
+        for (Long id : param.getIds()) {
             delete(DefaultDto.DeleteReqDto.builder().id(id).build(), reqUserId);
         }
     }
 
+    // 권한 상세 단건 조회
     public PermissionDetailDto.DetailResDto get(DefaultDto.DetailReqDto param, Long reqUserId) {
         permittedService.isPermitted(reqUserId, target, 200);
-        PermissionDetailDto.DetailResDto res = permissionDetailMapper.detail(param.getId());
-        return res;
+        return permissionDetailMapper.detail(param.getId());
     }
 
     @Override
@@ -100,9 +102,9 @@ public class PermissionDetailServiceimpl implements PermissionDetailService {
         return detailList(permissionDetailMapper.list(param), reqUserId);
     }
 
-    public List<PermissionDetailDto.DetailResDto> detailList(List<PermissionDetailDto.DetailResDto> list, Long reqUserId){
+    private List<PermissionDetailDto.DetailResDto> detailList(List<PermissionDetailDto.DetailResDto> list, Long reqUserId) {
         List<PermissionDetailDto.DetailResDto> newList = new ArrayList<>();
-        for(PermissionDetailDto.DetailResDto each : list){
+        for (PermissionDetailDto.DetailResDto each : list) {
             newList.add(get(DefaultDto.DetailReqDto.builder().id(each.getId()).build(), reqUserId));
         }
         return newList;
@@ -118,21 +120,6 @@ public class PermissionDetailServiceimpl implements PermissionDetailService {
     @Override
     public List<PermissionDetailDto.DetailResDto> scrollList(PermissionDetailDto.ScrollListReqDto param, Long reqUserId) {
         param.init();
-
-        //타이틀 로 스크롤 더 요청하는 경우 어쩔수 없이 작업!
-        /*if("title".equals(param.getOrderby())){
-            String mark = param.getMark();
-            if(mark != null && !mark.isEmpty()){
-                PermissionDetailDto.DetailResDto permissionDetail = permissionDetailMapper.detail(Long.parseLong(mark));
-                if(permissionDetail != null){
-                    mark = permissionDetail.getTitle() + "_" + permissionDetail.getId();
-                    param.setMark(mark);
-                }
-            }
-        }*/
-
         return detailList(permissionDetailMapper.scrollList(param), reqUserId);
     }
-
-
 }

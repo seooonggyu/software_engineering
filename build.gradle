@@ -30,9 +30,12 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.springframework.security:spring-security-test'  // MockMvc csrf(), @WithMockUser
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'  // Spring Boot 4.x @WebMvcTest, @AutoConfigureMockMvc
 
     /* db */
     runtimeOnly 'com.mysql:mysql-connector-j'
+    testRuntimeOnly 'com.h2database:h2'  // 시스템 테스트(E2E) H2 인메모리 DB
 
     // 시큐리티 사용을 위함
     implementation 'org.springframework.boot:spring-boot-starter-security'

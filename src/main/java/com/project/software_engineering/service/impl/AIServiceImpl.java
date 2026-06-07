@@ -26,45 +26,42 @@ public class AIServiceImpl implements AIService {
     @Value("${backend.base.url}")
     private String backendBaseUrl;
 
+    // 아이템 등록 후 AI 서버에 비동기로 전송
     @Override
     public void registerItemToAIAsync(Item item, List<String> imagePaths) {
         new Thread(() -> {
             try {
-                // 이미 전체 S3 URL 형태이므로 그대로 리스트로 전송
-                List<String> imageUrlPayload = imagePaths;
-
                 if (item.getStatus() == ItemStatus.LOST) {
                     AIDto.LostItemRegisterReqDto req = AIDto.LostItemRegisterReqDto.builder()
-                            .image_url(imageUrlPayload)
+                            .image_url(imagePaths)
                             .lost_id(item.getId())
                             .build();
-
                     AIDto.LostItemRegisterResDto res = restTemplate.postForObject(
                             aiServerUrl + "/api/ai/lost", req, AIDto.LostItemRegisterResDto.class);
-                    log.info("AI Server Response (LOST): {}", res);
+                    log.info("AI 서버 응답 (LOST): {}", res);
+
                 } else if (item.getStatus() == ItemStatus.FOUND) {
                     AIDto.FoundItemRegisterReqDto req = AIDto.FoundItemRegisterReqDto.builder()
-                            .image_url(imageUrlPayload)
+                            .image_url(imagePaths)
                             .found_id(item.getId())
                             .build();
-
                     AIDto.FoundItemRegisterResDto res = restTemplate.postForObject(
                             aiServerUrl + "/api/ai/found", req, AIDto.FoundItemRegisterResDto.class);
-                    log.info("AI Server Response (FOUND): {}", res);
+                    log.info("AI 서버 응답 (FOUND): {}", res);
                 }
             } catch (Exception e) {
-                log.error("Failed to register item to AI server. Item ID: {}", item.getId(), e);
+                log.error("AI 서버 등록 실패. Item ID: {}", item.getId(), e);
             }
         }).start();
     }
 
+    // AI 서버에서 분실물 매칭 결과 조회
     @Override
     public AIDto.LostItemRegisterResDto getMatchesForLostItem(Long itemId) {
         try {
-            String url = aiServerUrl + "/api/ai/matches/" + itemId;
-            return restTemplate.getForObject(url, AIDto.LostItemRegisterResDto.class);
+            return restTemplate.getForObject(aiServerUrl + "/api/ai/matches/" + itemId, AIDto.LostItemRegisterResDto.class);
         } catch (Exception e) {
-            log.error("Failed to get matches from AI server. Item ID: {}", itemId, e);
+            log.error("AI 서버 매칭 조회 실패. Item ID: {}", itemId, e);
             return AIDto.LostItemRegisterResDto.builder()
                     .lost_id(itemId)
                     .matches(Collections.emptyList())

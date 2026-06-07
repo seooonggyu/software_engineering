@@ -10,29 +10,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExternalProperties {
 
-	@Value("${external.jwt.tokenSecretKey}")
-	private String tokenSecretKey;
-	
-	@Value("${external.jwt.tokenPrefix}")
-	private String tokenPrefix;
+    @Value("${external.jwt.tokenSecretKey}")
+    private String tokenSecretKey;
 
-	@Value("${external.jwt.accessKey}")
-	private String accessKey;
+    @Value("${external.jwt.tokenPrefix}")
+    private String tokenPrefix;
 
-	@Value("${external.jwt.accessTokenExpirationTime}")
-	private Long accessTokenExpirationTime;
+    @Value("${external.jwt.accessKey}")
+    private String accessKey;
 
-	@Value("${external.jwt.refreshKey}")
-	private String refreshKey;
+    @Value("${external.jwt.accessTokenExpirationTime}")
+    private Long accessTokenExpirationTime;
 
-	@Value("${external.jwt.refreshTokenExpirationTime}")
-	private Long refreshTokenExpirationTime;
+    @Value("${external.jwt.refreshKey}")
+    private String refreshKey;
 
-//	@Value("${github.base-url}")
-//	private String githubBaseUrl;
-//	@Value("${github.client-id}")
-//	private String githubClientId;
-//	@Value("${github.client-secret}")
-//	private String githubClientSecret;
-
+    @Value("${external.jwt.refreshTokenExpirationTime}")
+    private Long refreshTokenExpirationTime;
 }

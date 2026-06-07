@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+/**
+ * OAuth2 로그인 시 구글 유저 정보를 가져와 자동 회원가입 처리하는 서비스
+ */
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
@@ -33,29 +36,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             return super.loadUser(userRequest);
         }
 
-        String provider = oAuth2UserInfo.getProvider();
-        String providerId = oAuth2UserInfo.getProviderId();
-        String username = provider + "_" + providerId;
-        
-        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
-        String password = bCryptPasswordEncoder.encode(UUID.randomUUID().toString()); // 임시 비밀번호
-        
+        String username = oAuth2UserInfo.getProvider() + "_" + oAuth2UserInfo.getProviderId();
+        String password = new BCryptPasswordEncoder().encode(UUID.randomUUID().toString());
         String email = oAuth2UserInfo.getEmail();
-        
-        // 한동대학교 이메일(@handong.ac.kr, @handong.edu)만 허용
-//        if (email == null || (!email.endsWith("@handong.ac.kr") && !email.endsWith("@handong.edu"))) {
-//            throw new OAuth2AuthenticationException("허용되지 않은 이메일 도메인입니다. 한동대학교 이메일로 로그인해주세요.");
-//        }
+
+        // 이메일 없으면 로그인 거부
         if (email == null) {
-            throw new OAuth2AuthenticationException("허용되지 않은 이메일 도메인입니다. 한동대학교 이메일로 로그인해주세요.");
+            throw new OAuth2AuthenticationException("이메일이 없는 계정입니다.");
         }
 
-        String name = oAuth2UserInfo.getName();
-
         User userEntity = userRepository.findByUsername(username);
-
         if (userEntity == null) {
-            userEntity = User.of(username, password, name, 3100);
+            userEntity = User.of(username, password, oAuth2UserInfo.getName(), 3100);
             userRepository.save(userEntity);
         }
 

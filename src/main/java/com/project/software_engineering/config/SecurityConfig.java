@@ -20,73 +20,75 @@ import tools.jackson.databind.ObjectMapper;
 @EnableMethodSecurity
 @Configuration
 public class SecurityConfig {
-	
-	private final UserRepository userRepository;
-	private final CorsFilterConfiguration corsFilterConfiguration;
-	private final ObjectMapper objectMapper;
-	private final AuthService authService;
-	private final ExternalProperties externalProperties;
-	private final CustomOAuth2UserService customOAuth2UserService;
-	private final OAuth2SuccessHandler oAuth2SuccessHandler;
-	private final OAuth2FailureHandler oAuth2FailureHandler;
 
-	public SecurityConfig(UserRepository userRepository, CorsFilterConfiguration corsFilterConfiguration, ObjectMapper objectMapper, AuthService authService
-			, ExternalProperties externalProperties, CustomOAuth2UserService customOAuth2UserService, OAuth2SuccessHandler oAuth2SuccessHandler, OAuth2FailureHandler oAuth2FailureHandler) {
-		this.userRepository = userRepository;
-		this.corsFilterConfiguration = corsFilterConfiguration;
-		this.objectMapper = objectMapper;
-		this.authService = authService;
-		this.externalProperties = externalProperties;
-		this.customOAuth2UserService = customOAuth2UserService;
-		this.oAuth2SuccessHandler = oAuth2SuccessHandler;
-		this.oAuth2FailureHandler = oAuth2FailureHandler;
-	}
+    private final UserRepository userRepository;
+    private final CorsFilterConfiguration corsFilterConfiguration;
+    private final ObjectMapper objectMapper;
+    private final AuthService authService;
+    private final ExternalProperties externalProperties;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
-	@Bean
-	public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-		return authenticationConfiguration.getAuthenticationManager();
-	}
+    public SecurityConfig(UserRepository userRepository, CorsFilterConfiguration corsFilterConfiguration,
+                          ObjectMapper objectMapper, AuthService authService, ExternalProperties externalProperties,
+                          CustomOAuth2UserService customOAuth2UserService, OAuth2SuccessHandler oAuth2SuccessHandler,
+                          OAuth2FailureHandler oAuth2FailureHandler) {
+        this.userRepository = userRepository;
+        this.corsFilterConfiguration = corsFilterConfiguration;
+        this.objectMapper = objectMapper;
+        this.authService = authService;
+        this.externalProperties = externalProperties;
+        this.customOAuth2UserService = customOAuth2UserService;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+        this.oAuth2FailureHandler = oAuth2FailureHandler;
+    }
 
-	@Bean
-	BCryptPasswordEncoder bCryptPasswordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
-	
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @Bean
+    BCryptPasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
     /**
-	 *  Spring Security 권한 설정.
-	 */
-	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+     * Spring Security 필터 체인 설정
+     */
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+        // 기본 보안 설정: CSRF 비활성화, 세션 STATELESS
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
+                .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .oauth2Login(oauth2 -> oauth2
+                        .redirectionEndpoint(redirection -> redirection.baseUri("/login/oauth2/code/*"))
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
+                );
 
-		// 1. 기본 보안 설정 (CSRF, 폼로그인 비활성화, 세션 STATELESS 설정)
-		http
-				.csrf(AbstractHttpConfigurer::disable)
-				.formLogin(AbstractHttpConfigurer::disable)
-				.httpBasic(AbstractHttpConfigurer::disable)
-				.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
-				.sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-				.oauth2Login(oauth2 -> oauth2
-						.redirectionEndpoint(redirection -> redirection.baseUri("/login/oauth2/code/*"))
-						.userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-						.successHandler(oAuth2SuccessHandler)
-						.failureHandler(oAuth2FailureHandler)
-				);
+        // JWT 필터 등록
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(
+                authenticationManager, objectMapper, authService, externalProperties);
+        jwtAuthenticationFilter.setFilterProcessesUrl("/api/login");
 
-		// 2. 커스텀 필터 인스턴스 생성 및 세팅
-		JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager, objectMapper, authService, externalProperties);
-		jwtAuthenticationFilter.setFilterProcessesUrl("/api/login"); // 로그인 엔드포인트 지정
+        JwtAuthorizationFilter jwtAuthorizationFilter = new JwtAuthorizationFilter(
+                authenticationManager, userRepository, authService, externalProperties);
+        FilterExceptionHandlerFilter exceptionHandlerFilter = new FilterExceptionHandlerFilter();
 
-		JwtAuthorizationFilter jwtAuthorizationFilter = new JwtAuthorizationFilter(authenticationManager, userRepository, authService, externalProperties);
-		FilterExceptionHandlerFilter exceptionHandlerFilter = new FilterExceptionHandlerFilter();
+        http
+                .addFilter(corsFilterConfiguration.corsFilter())
+                .addFilter(jwtAuthenticationFilter)
+                .addFilter(jwtAuthorizationFilter)
+                .addFilterBefore(exceptionHandlerFilter, BasicAuthenticationFilter.class);
 
-		// 3. 필터 체인에 차례대로 조립 (addFilter 사용)
-		http
-				.addFilter(corsFilterConfiguration.corsFilter())
-				.addFilter(jwtAuthenticationFilter)
-				.addFilter(jwtAuthorizationFilter)
-				.addFilterBefore(exceptionHandlerFilter, BasicAuthenticationFilter.class);
-
-		return http.build();
-	}
+        return http.build();
+    }
 }

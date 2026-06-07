@@ -1,0 +1,70 @@
+# ====================================================================
+# Test Profile 설정 (src/test/resources/application-test.yaml)
+# ====================================================================
+# 시스템 테스트(E2E)에서 실제 MySQL 대신 H2 인메모리 DB 사용
+# 외부 서비스(AI 서버, S3, OAuth2)는 Mock으로 대체됨
+# ====================================================================
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop   # 테스트 실행 시 스키마 자동 생성, 종료 시 삭제
+    show-sql: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100
+
+  sql:
+    init:
+      mode: never  # H2에서는 MyBatis SQL 초기화 스크립트 비활성화
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            redirect-uri: "http://localhost/login/oauth2/code/google"
+            scope: profile, email
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+
+external:
+  jwt:
+    tokenSecretKey: test-secret-key-for-unit-testing-only-do-not-use-in-production
+    tokenPrefix: "Bearer "
+    accessKey: Authorization
+    accessTokenExpirationTime: 1800000
+    refreshKey: RefreshToken
+    refreshTokenExpirationTime: 1209600000
+
+ai:
+  server:
+    url: http://mock-ai-server:8000
+
+backend:
+  base:
+    url: http://localhost:8080
+
+aws:
+  s3:
+    bucket: test-bucket
+    region: ap-northeast-2
+  credentials:
+    access-key: test-access-key
+    secret-key: test-secret-key
+
+file:
+  dir: /tmp/test-uploads/

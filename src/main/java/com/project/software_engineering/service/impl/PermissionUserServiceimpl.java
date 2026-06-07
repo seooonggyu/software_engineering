@@ -27,24 +27,23 @@ public class PermissionUserServiceimpl implements PermissionUserService {
     private final PermissionUserMapper permissionUserMapper;
     private final PermittedService permittedService;
 
-    /**/
+    // 권한 유저 생성 (username 또는 ID로 유저 조회 후 등록)
     @Override
     public DefaultDto.CreateResDto create(PermissionUserDto.CreateReqDto param, Long reqUserId) {
         permittedService.isPermitted(reqUserId, target, 110);
 
-        //유저 아이디 입력한거 최대한 보정하기!
         User user = userRepository.findByUsername(param.getUsername());
-        if(user == null){
+        if (user == null) {
             user = userRepository.findById(Long.parseLong(param.getUsername())).orElse(null);
         }
-        if(user == null){
+        if (user == null) {
             throw new RuntimeException("no user");
         }
         param.setUserId(user.getId());
 
-        //혹시 이미 존재하는 데이터 일수도 있으니까 확인!
+        // 이미 존재하는 데이터면 deleted 상태만 복구
         PermissionUser permissionUser = permissionUserRepository.findByPermissionIdAndUserId(param.getPermissionId(), param.getUserId());
-        if(permissionUser == null) {
+        if (permissionUser == null) {
             permissionUser = param.toEntity();
         } else {
             permissionUser.setDeleted(false);
@@ -52,6 +51,7 @@ public class PermissionUserServiceimpl implements PermissionUserService {
         return permissionUserRepository.save(permissionUser).toCreateResDto();
     }
 
+    // 권한 유저 수정
     @Override
     public void update(PermissionUserDto.UpdateReqDto param, Long reqUserId) {
         permittedService.isPermitted(reqUserId, target, 120);
@@ -60,6 +60,7 @@ public class PermissionUserServiceimpl implements PermissionUserService {
         permissionUserRepository.save(permissionUser);
     }
 
+    // 권한 유저 삭제 (소프트 딜리트)
     @Override
     public void delete(DefaultDto.DeleteReqDto param, Long reqUserId) {
         update(PermissionUserDto.UpdateReqDto.builder().id(param.getId()).deleted(true).build(), reqUserId);
@@ -67,15 +68,15 @@ public class PermissionUserServiceimpl implements PermissionUserService {
 
     @Override
     public void deleteList(DefaultDto.DeleteListReqDto param, Long reqUserId) {
-        for(Long id : param.getIds()){
+        for (Long id : param.getIds()) {
             delete(DefaultDto.DeleteReqDto.builder().id(id).build(), reqUserId);
         }
     }
 
+    // 권한 유저 단건 조회
     public PermissionUserDto.DetailResDto get(DefaultDto.DetailReqDto param, Long reqUserId) {
         permittedService.isPermitted(reqUserId, target, 200);
-        PermissionUserDto.DetailResDto res = permissionUserMapper.detail(param.getId());
-        return res;
+        return permissionUserMapper.detail(param.getId());
     }
 
     @Override
@@ -88,9 +89,9 @@ public class PermissionUserServiceimpl implements PermissionUserService {
         return detailList(permissionUserMapper.list(param), reqUserId);
     }
 
-    public List<PermissionUserDto.DetailResDto> detailList(List<PermissionUserDto.DetailResDto> list, Long reqUserId){
+    private List<PermissionUserDto.DetailResDto> detailList(List<PermissionUserDto.DetailResDto> list, Long reqUserId) {
         List<PermissionUserDto.DetailResDto> newList = new ArrayList<>();
-        for(PermissionUserDto.DetailResDto each : list){
+        for (PermissionUserDto.DetailResDto each : list) {
             newList.add(get(DefaultDto.DetailReqDto.builder().id(each.getId()).build(), reqUserId));
         }
         return newList;
@@ -106,20 +107,6 @@ public class PermissionUserServiceimpl implements PermissionUserService {
     @Override
     public List<PermissionUserDto.DetailResDto> scrollList(PermissionUserDto.ScrollListReqDto param, Long reqUserId) {
         param.init();
-
-        //타이틀 로 스크롤 더 요청하는 경우 어쩔수 없이 작업!
-        /*if("title".equals(param.getOrderby())){
-            String mark = param.getMark();
-            if(mark != null && !mark.isEmpty()){
-                PermissionUserDto.DetailResDto permissionUser = permissionUserMapper.detail(Long.parseLong(mark));
-                if(permissionUser != null){
-                    mark = permissionUser.getTitle() + "_" + permissionUser.getId();
-                    param.setMark(mark);
-                }
-            }
-        }*/
-
         return detailList(permissionUserMapper.scrollList(param), reqUserId);
     }
-
 }

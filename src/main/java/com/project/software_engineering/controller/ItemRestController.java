@@ -1,9 +1,10 @@
 package com.project.software_engineering.controller;
 
+import com.project.software_engineering.dto.AIDto;
 import com.project.software_engineering.dto.DefaultDto;
 import com.project.software_engineering.dto.ItemDto;
-import com.project.software_engineering.dto.UserDto;
 import com.project.software_engineering.security.PrincipalDetails;
+import com.project.software_engineering.service.AIService;
 import com.project.software_engineering.service.ItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,132 +22,70 @@ import java.util.List;
 public class ItemRestController {
 
     private final ItemService itemService;
+    private final AIService aiService;
 
-    public Long getReqUserId(PrincipalDetails principalDetails){
-        if(principalDetails == null || principalDetails.getUser() == null || principalDetails.getUser().getId() == null){
+    // 요청 유저 ID 추출
+    private Long getReqUserId(PrincipalDetails principalDetails) {
+        if (principalDetails == null || principalDetails.getUser() == null || principalDetails.getUser().getId() == null) {
             return null;
         }
         return principalDetails.getUser().getId();
     }
 
-    @PreAuthorize("permitAll()") // 임시로 테스트를 위해 권한 해제 (hasRole('USER') -> permitAll())
-//    @PreAuthorize("hasRole('USER')")
+    // 아이템 등록 (인증 없이도 접근 가능)
+    @PreAuthorize("permitAll()")
     @PostMapping("")
-    public ResponseEntity<DefaultDto.CreateResDto> create(@RequestPart(value = "params") ItemDto.CreateReqDto params, @RequestPart(value = "files", required = false) List<MultipartFile> images, @AuthenticationPrincipal PrincipalDetails principalDetails){
+    public ResponseEntity<DefaultDto.CreateResDto> create(
+            @RequestPart(value = "params") ItemDto.CreateReqDto params,
+            @RequestPart(value = "files", required = false) List<MultipartFile> images,
+            @AuthenticationPrincipal PrincipalDetails principalDetails) {
         Long reqUserId = getReqUserId(principalDetails);
-        if(reqUserId == null) reqUserId = -200L; // 테스트용 더미 유저 ID 할당 (권한 우회)
+        if (reqUserId == null) reqUserId = -200L; // 비인증 접근 시 권한 우회 더미 ID
         return ResponseEntity.ok(itemService.create(params, images, reqUserId));
     }
 
+    // 아이템 단건 조회
     @PreAuthorize("hasRole('USER')")
     @GetMapping("")
-    public ResponseEntity<ItemDto.DetailResDto> detail(DefaultDto.DetailReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-        Long reqUserId = getReqUserId(principalDetails);
-        return ResponseEntity.ok(itemService.detail(params, reqUserId));
+    public ResponseEntity<ItemDto.DetailResDto> detail(
+            DefaultDto.DetailReqDto params,
+            @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return ResponseEntity.ok(itemService.detail(params, getReqUserId(principalDetails)));
     }
 
+    // 아이템 목록 조회
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/list")
-    public ResponseEntity<List<ItemDto.DetailResDto>> list(ItemDto.ListReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-        Long reqUserId = getReqUserId(principalDetails);
-        return ResponseEntity.ok(itemService.list(params, reqUserId));
+    public ResponseEntity<List<ItemDto.DetailResDto>> list(
+            ItemDto.ListReqDto params,
+            @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        return ResponseEntity.ok(itemService.list(params, getReqUserId(principalDetails)));
     }
 
+    // 아이템 수정
     @PreAuthorize("hasRole('USER')")
     @PutMapping("")
-    public ResponseEntity<Void> update(@RequestBody ItemDto.UpdateReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-        Long reqUserId = getReqUserId(principalDetails);
-        itemService.update(params, reqUserId);
+    public ResponseEntity<Void> update(
+            @RequestBody ItemDto.UpdateReqDto params,
+            @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        itemService.update(params, getReqUserId(principalDetails));
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
+    // 아이템 삭제 (소프트 딜리트)
     @PreAuthorize("hasRole('USER')")
     @DeleteMapping("")
-    public ResponseEntity<Void> delete(@RequestBody DefaultDto.DeleteReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-        Long reqUserId = getReqUserId(principalDetails);
-        itemService.delete(params, reqUserId);
+    public ResponseEntity<Void> delete(
+            @RequestBody DefaultDto.DeleteReqDto params,
+            @AuthenticationPrincipal PrincipalDetails principalDetails) {
+        itemService.delete(params, getReqUserId(principalDetails));
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
-    private final com.project.software_engineering.service.AIService aiService;
-
-    @PreAuthorize("permitAll()") // 임시로 테스트를 위해 권한 해제
-    // @PreAuthorize("hasRole('USER')")
+    // AI 서버에서 분실물 매칭 결과 조회
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/{id}/matches")
-    public ResponseEntity<com.project.software_engineering.dto.AIDto.LostItemRegisterResDto> getMatches(@PathVariable Long id, @AuthenticationPrincipal PrincipalDetails principalDetails){
-        // 권한 확인 등은 생략하거나 추가 가능
+    public ResponseEntity<AIDto.LostItemRegisterResDto> getMatches(@PathVariable Long id) {
         return ResponseEntity.ok(aiService.getMatchesForLostItem(id));
     }
-
-
-//    final UserService userService;
-//    final ExternalProperties externalProperties;
-//
-//    public Long getReqUserId(PrincipalDetails principalDetails){
-//        if(principalDetails == null || principalDetails.getUser() == null || principalDetails.getUser().getId() == null){
-//            return null;
-//        }
-//        return principalDetails.getUser().getId();
-//    }
-//
-//    @PreAuthorize("permitAll()")
-//    @PostMapping("/signup")
-//    public ResponseEntity<DefaultDto.CreateResDto> signup(@RequestBody UserDto.CreateReqDto params){
-//        return ResponseEntity.ok(userService.signup(params, null));
-//    }
-//
-//    @PreAuthorize("hasRole('ADMIN')")
-//    @PostMapping("")
-//    public ResponseEntity<DefaultDto.CreateResDto> create(@RequestBody UserDto.CreateReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-//        Long reqUserId = getReqUserId(principalDetails);
-//        return ResponseEntity.ok(userService.create(params, reqUserId));
-//    }
-//
-//    @PreAuthorize("hasRole('USER')")
-//    @PutMapping("")
-//    public ResponseEntity<Void> update(@RequestBody UserDto.UpdateReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-//        Long reqUserId = getReqUserId(principalDetails);
-//        userService.update(params, reqUserId);
-//        return ResponseEntity.status(HttpStatus.OK).build();
-//    }
-//
-//    @PreAuthorize("hasRole('USER')")
-//    @DeleteMapping("")
-//    public ResponseEntity<Void> delete(@RequestBody DefaultDto.DeleteReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-//        Long reqUserId = getReqUserId(principalDetails);
-//        userService.delete(params, reqUserId);
-//        return ResponseEntity.status(HttpStatus.OK).build();
-//    }
-//
-//    @PreAuthorize("hasRole('USER')")
-//    @GetMapping("")
-//    public ResponseEntity<UserDto.DetailResDto> detail(DefaultDto.DetailReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-//        Long reqUserId = getReqUserId(principalDetails);
-//        return ResponseEntity.ok(userService.detail(params, reqUserId));
-//    }
-//
-//    @PreAuthorize("hasRole('USER')")
-//    @GetMapping("/list")
-//    public ResponseEntity<List<UserDto.DetailResDto>> list(UserDto.ListReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-//        Long reqUserId = getReqUserId(principalDetails);
-//        return ResponseEntity.ok(userService.list(params, reqUserId));
-//    }
-//
-//    /*
-//    @PreAuthorize("hasRole('USER')")
-//    @GetMapping("/pagedList")
-//    public ResponseEntity<DefaultDto.PagedListResDto> pagedList(UserDto.PagedListReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-//        Long reqUserId = getReqUserId(principalDetails);
-//        return ResponseEntity.ok(userService.pagedList(params, reqUserId));
-//    }
-//    */
-//    /*
-//    @PreAuthorize("hasRole('USER')")
-//    @GetMapping("/scrollList")
-//    public ResponseEntity<List<UserDto.DetailResDto>> scrollList(UserDto.ScrollListReqDto params, @AuthenticationPrincipal PrincipalDetails principalDetails){
-//        Long reqUserId = getReqUserId(principalDetails);
-//        return ResponseEntity.ok(userService.scrollList(params, reqUserId));
-//    }
-
-
 }
